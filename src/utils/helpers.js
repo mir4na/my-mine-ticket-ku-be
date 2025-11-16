@@ -1,31 +1,52 @@
-const { ethers } = require('ethers');
+import crypto from 'crypto';
+import { config } from '../config/index.js';
+import { ApiError } from './apiError.js';
 
-const helpers = {
-    validateAddress(address) {
-        return ethers.isAddress(address);
-    },
-
-    formatEther(wei) {
-        return ethers.formatEther(wei);
-    },
-
-    parseEther(ether) {
-        return ethers.parseEther(ether.toString());
-    },
-
-    calculateMaxResalePrice(originalPrice) {
-        return (originalPrice * 120) / 100;
-    },
-
-    isValidDate(timestamp) {
-        return timestamp > Math.floor(Date.now() / 1000);
-    },
-
-    calculateRevenueShares(amount, percentages) {
-        return percentages.map(percentage => {
-            return (amount * percentage) / 10000;
-        });
-    }
+export const generateQRSignature = (ticketId, eventId) => {
+  const data = `${ticketId}:${eventId}`;
+  return crypto
+    .createHmac('sha256', config.security.hmacSecret)
+    .update(data)
+    .digest('hex');
 };
 
-module.exports = helpers;
+export const verifyQRSignature = (ticketId, eventId, signature) => {
+  const expectedSignature = generateQRSignature(ticketId, eventId);
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+};
+
+export const generateQRData = (ticketId, eventId) => {
+  const signature = generateQRSignature(ticketId, eventId);
+  return {
+    ticket_id: ticketId,
+    event_id: eventId,
+    signature,
+  };
+};
+
+export const asyncHandler = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
+
+export const paginate = (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+  return { skip, take: limit };
+};
+
+export const calculateRevenueSplit = (amount) => {
+  const taxAmount = (amount * config.platform.taxPercentage) / 100;
+  const platformFee = (amount * config.platform.platformFeePercentage) / 100;
+  const netAmount = amount - taxAmount - platformFee;
+
+  return {
+    taxAmount,
+    platformFee,
+    netAmount,
+    grossAmount: amount,
+  };
+};

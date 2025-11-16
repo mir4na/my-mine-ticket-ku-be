@@ -1,11 +1,47 @@
-# node_modules
 node_modules/
+dist/
+build/
+out/
+cache/
+artifacts/
 
-# Migration files
+.env
+.env.local
+.env.production
+combined.log
+error.log
+debug.log
+output.txt
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+.vscode/
+.idea/
+
+prisma/.env
 prisma/migrations/
 
-# E
-.env
-error.log
-combined.log
-out.txt
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+coverage/
+.nyc_output/
+
+*.pem
+*.key
+privateKey.txt
+
+broadcast/
+cache_forge/
+out_forge/
+
+lib/
+
+*.tsbuildinfo

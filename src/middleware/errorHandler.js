@@ -1,33 +1,16 @@
-const logger = require('../utils/logger');
+import { config } from '../config/index.js';
 
-const errorHandler = (err, req, res, next) => {
-  logger.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
+export const errorHandler = (err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
 
-  if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation Error',
-      errors: err.errors
-    });
+  if (config.nodeEnv === 'development') {
+    console.error('Error:', err);
   }
 
-  if (err.name === 'PrismaClientKnownRequestError') {
-    return res.status(400).json({
-      success: false,
-      message: 'Database Error',
-      error: err.message
-    });
-  }
-
-  return res.status(err.statusCode || 500).json({
+  res.status(statusCode).json({
     success: false,
-    message: err.message || 'Internal Server Error'
+    message,
+    ...(config.nodeEnv === 'development' && { stack: err.stack }),
   });
 };
-
-module.exports = errorHandler;

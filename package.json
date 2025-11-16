@@ -1,35 +1,35 @@
 {
-  "name": "eventchain-backend",
+  "name": "mymineticketku-backend",
   "version": "1.0.0",
-  "description": "MyMineTicketKu Backend API",
-  "main": "server.js",
+  "type": "module",
+  "description": "Backend for MyMineTicketKu - NFT Event Ticketing Platform",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node src/app.js",
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:push": "prisma db push",
-    "indexer": "node src/services/indexerService.js"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "node prisma/seed.js"
   },
   "dependencies": {
-    "@prisma/client": "^5.7.0",
-    "axios": "^1.6.2",
-    "bcryptjs": "^3.0.2",
+    "@prisma/client": "^5.9.0",
+    "axios": "^1.6.5",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "ethers": "^6.9.0",
+    "dotenv": "^16.4.1",
+    "ethers": "^6.10.0",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
+    "joi": "^17.12.0",
     "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "winston": "^3.11.0"
+    "midtrans-client": "^1.3.1",
+    "nodemailer": "^6.9.8",
+    "pdfkit": "^0.14.0",
+    "qrcode": "^1.5.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "prisma": "^5.7.0"
+    "nodemon": "^3.0.3",
+    "prisma": "^5.9.0"
   }
 }

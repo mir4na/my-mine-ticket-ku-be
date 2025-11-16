@@ -1,143 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id            String   @id @default(uuid())
-  walletAddress String   @default("")
-  role          Role     @default(USER)
-  name          String?
-  email         String?  @unique
-  password      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(uuid())
+  username        String   @unique
+  displayName     String?
+  email           String   @unique
+  password        String
+  role            Role     @default(USER)
+  walletAddress   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  events        Event[]
-  tickets       Ticket[]
-  proposals     Proposal[]
-  transactions  Transaction[]
-  bookmarks     EventBookmark[]
-  walletHistory WalletHistory[]
+  events          Event[]
+  tickets         Ticket[]
+  revenueReceivers RevenueReceiver[]
+  transactions    Transaction[]
+  resaleListings  ResaleListing[]
 }
 
 enum Role {
-  ADMIN
-  EO
   USER
-}
-
-model WalletHistory {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action    String
-  details   Json
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-model Admin {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  address   String   @default("")
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  EO
+  SUPERADMIN
 }
 
 model Event {
-  id          String      @id @default(uuid())
-  eventId     Int         @unique @default(autoincrement())
-  name        String
-  description String
-  location    String
-  date        DateTime
-  posterUrl   String?
-  status      EventStatus @default(PENDING)
-  
-  creatorId   String
-  creator     User        @relation(fields: [creatorId], references: [id])
-  
-  bookmarkCount Int       @default(0)
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id              String      @id @default(uuid())
+  name            String
+  bannerUrl       String
+  location        String
+  startDate       DateTime
+  endDate         DateTime
+  status          EventStatus @default(DRAFT)
+  creatorId       String
+  creator         User        @relation(fields: [creatorId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  ticketTypes TicketType[]
-  proposals   Proposal[]
-  tickets     Ticket[]
-  bookmarks   EventBookmark[]
-  transactions Transaction[]
-  attachments EventAttachment[]
-  
-  @@index([creatorId])
-  @@index([status])
-  @@index([date])
+  ticketTypes     TicketType[]
+  revenueReceivers RevenueReceiver[]
+  transactions    Transaction[]
+  scanLogs        ScanLog[]
 }
 
 enum EventStatus {
-  PENDING
-  APPROVED
-  ACTIVE
-  ENDED
-  CANCELLED
+  DRAFT
+  PENDING_APPROVAL
+  ACCEPTED
+  REJECTED
+  COMPLETED
 }
 
-model EventBookmark {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+model RevenueReceiver {
+  id              String   @id @default(uuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id])
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  email           String
+  percentage      Float
+  bankAccount     String?
+  bankName        String?
+  accountHolder   String?
+  walletAddress   String?
+  approvalStatus  ApprovalStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  @@unique([userId, eventId])
-  @@index([userId])
-  @@index([eventId])
+  withdrawals     Withdrawal[]
+
+  @@unique([eventId, email])
 }
 
-model EventAttachment {
-  id          String   @id @default(uuid())
-  eventId     String
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  fileName    String
-  fileUrl     String
-  fileType    String
-  fileSize    Int
-  uploadedAt  DateTime @default(now())
-
-  @@index([eventId])
-}
-
-model Proposal {
-  id                    String          @id @default(uuid())
-  eventId               String          @unique
-  event                 Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  creatorId             String
-  creator               User            @relation(fields: [creatorId], references: [id])
-  
-  revenueBeneficiaries  Json
-  taxWalletAddress      String
-  
-  status                ProposalStatus  @default(PENDING)
-  adminComment          String?
-  
-  submittedAt           DateTime        @default(now())
-  reviewedAt            DateTime?
-  
-  @@index([status])
-  @@index([creatorId])
-}
-
-enum ProposalStatus {
+enum ApprovalStatus {
   PENDING
   APPROVED
   REJECTED
@@ -145,103 +88,141 @@ enum ProposalStatus {
 
 model TicketType {
   id              String   @id @default(uuid())
-  typeId          Int      @default(autoincrement())
   eventId         String
-  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
+  event           Event    @relation(fields: [eventId], references: [id])
   name            String
-  description     String?
-  price           String
+  price           Float
   stock           Int
   sold            Int      @default(0)
-  
   saleStartDate   DateTime
   saleEndDate     DateTime
-  
-  benefits        Json?
-  active          Boolean  @default(true)
-  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
+
   tickets         Ticket[]
-  
-  @@unique([eventId, typeId])
-  @@index([eventId])
-  @@index([active])
 }
 
 model Ticket {
-  id                String        @id @default(uuid())
-  ticketId          Int           @unique
-  
-  eventId           String
-  event             Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  typeId            String
-  ticketType        TicketType    @relation(fields: [typeId], references: [id])
-  
-  ownerId           String
-  owner             User          @relation(fields: [ownerId], references: [id])
-  
-  txHash            String
-  blockNumber       Int
-  originalPrice     String
-  
-  isUsed            Boolean       @default(false)
-  isForResale       Boolean       @default(false)
-  resalePrice       String?
-  resaleDeadline    DateTime?
-  resaleCount       Int           @default(0)
-  
-  qrCode            String        @unique
-  tokenURI          String?
-  
-  mintedAt          DateTime
-  usedAt            DateTime?
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
-  transactions      Transaction[]
-  
-  @@index([ownerId])
-  @@index([eventId])
-  @@index([isForResale])
-  @@index([isUsed])
+  id              String   @id @default(uuid())
+  ticketTypeId    String
+  ticketType      TicketType @relation(fields: [ticketTypeId], references: [id])
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  purchasePrice   Float
+  nftTokenId      String?
+  nftMetadataUri  String?
+  eligibleForResale Boolean @default(true)
+  isUsed          Boolean  @default(false)
+  usedAt          DateTime?
+  qrSignature     String
+  pdfVersion      Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  transactions    Transaction[]
+  scanLogs        ScanLog[]
+  resaleListings  ResaleListing[]
 }
 
 model Transaction {
-  id              String          @id @default(uuid())
-  txHash          String          @unique
-  
-  userId          String
-  user            User            @relation(fields: [userId], references: [id])
-  
-  type            TransactionType
-  
-  from            String
-  to              String?
-  amount          String
-  
-  eventId         String?
-  event           Event?          @relation(fields: [eventId], references: [id])
-  ticketId        String?
-  ticket          Ticket?         @relation(fields: [ticketId], references: [id])
-  
-  blockNumber     Int
-  timestamp       DateTime
-  
-  createdAt       DateTime        @default(now())
-  
-  @@index([userId])
-  @@index([type])
-  @@index([txHash])
-  @@index([timestamp])
+  id              String   @id @default(uuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  buyerId         String
+  buyer           User     @relation(fields: [buyerId], references: [id])
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id])
+  amount          Float
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentProvider String?
+  externalTxId    String?
+  txHash          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
-enum TransactionType {
-  PURCHASE
-  RESALE_BUY
-  USE
+enum PaymentMethod {
+  BANK_TRANSFER
+  VA
+  QRIS
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model ResaleListing {
+  id              String   @id @default(uuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  sellerId        String
+  seller          User     @relation(fields: [sellerId], references: [id])
+  price           Float
+  status          ResaleStatus @default(ACTIVE)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([ticketId, status])
+}
+
+enum ResaleStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+model Withdrawal {
+  id              String   @id @default(uuid())
+  receiverId      String
+  receiver        RevenueReceiver @relation(fields: [receiverId], references: [id])
+  amount          Float
+  wIDRAmount      Float
+  txHash          String?
+  status          WithdrawalStatus @default(PENDING)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ScanLog {
+  id              String   @id @default(uuid())
+  ticketId        String
+  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id])
+  scannedAt       DateTime @default(now())
+  scannerDevice   String?
+  scanResult      ScanResult
+}
+
+enum ScanResult {
+  SUCCESS
+  ALREADY_USED
+  BLACKLISTED
+  INVALID_SIGNATURE
+  NOT_FOUND
+}
+
+model PlatformConfig {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  value           String
+  updatedAt       DateTime @updatedAt
+}
+
+model BlacklistedTicket {
+  id              String   @id @default(uuid())
+  ticketId        String   @unique
+  reason          String
+  createdAt       DateTime @default(now())
 }
