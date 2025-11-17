@@ -69,7 +69,8 @@ class BlockchainService {
     
     const approveTx = await this.wIDRContract.approve(
       config.blockchain.escrowContract,
-      amountInWei
+      amountInWei,
+      { gasLimit: config.blockchain.gasLimit }
     );
     await approveTx.wait();
 
@@ -77,17 +78,24 @@ class BlockchainService {
       eventId,
       buyerAddress,
       amountInWei,
-      metadataURI
+      metadataURI,
+      { gasLimit: config.blockchain.gasLimit }
     );
     const receipt = await tx.wait();
     
-    const event = receipt.logs.find(
-      log => log.fragment?.name === 'TicketPurchased'
+    const purchasedEvent = receipt.logs.find(
+      log => {
+        try {
+          return log.fragment?.name === 'TicketPurchased';
+        } catch {
+          return false;
+        }
+      }
     );
     
     return {
       txHash: receipt.hash,
-      nftTokenId: event?.args?.nftTokenId?.toString(),
+      nftTokenId: purchasedEvent?.args?.nftTokenId?.toString() || '0',
     };
   }
 

@@ -1,56 +1,17 @@
-// src/controllers/scan.controller.js
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../utils/apiError.js';
 import { asyncHandler, verifyQRSignature } from '../utils/helpers.js';
-import { pdfService } from '../services/pdf.service.js';
 
 const prisma = new PrismaClient();
 
 export const scanController = {
-  downloadOfflinePackage: asyncHandler(async (req, res) => {
-    const { eventId } = req.params;
-
-    const event = await prisma.event.findUnique({
-      where: { id: eventId, creatorId: req.user.id },
-      include: {
-        ticketTypes: {
-          include: {
-            tickets: {
-              include: { owner: { select: { username: true } } },
-            },
-          },
-        },
-      },
-    });
-
-    if (!event) throw new ApiError(404, 'Event not found');
-
-    const blacklistedTickets = await prisma.blacklistedTicket.findMany({
-      select: { ticketId: true },
-    });
-
-    const allTickets = event.ticketTypes.flatMap(tt => tt.tickets);
-
-    const packageJson = await pdfService.generateEventOfflinePackage(
-      {
-        ...event,
-        blacklistedTickets: blacklistedTickets.map(bt => bt.ticketId),
-      },
-      allTickets
-    );
-
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename=event-${eventId}-package.json`);
-    res.send(packageJson);
-  }),
-
   scanTicket: asyncHandler(async (req, res) => {
-    const { ticketId, eventId, signature, scannerDevice } = req.body;
+    const { ticketId, eventId, signature } = req.body;
 
     const isSignatureValid = verifyQRSignature(ticketId, eventId, signature);
     if (!isSignatureValid) {
       await prisma.scanLog.create({
-        data: { ticketId, eventId, scanResult: 'INVALID_SIGNATURE', scannerDevice },
+        data: { ticketId, eventId, scanResult: 'INVALID_SIGNATURE' },
       });
 
       return res.json({
@@ -64,7 +25,7 @@ export const scanController = {
 
     if (blacklisted) {
       await prisma.scanLog.create({
-        data: { ticketId, eventId, scanResult: 'BLACKLISTED', scannerDevice },
+        data: { ticketId, eventId, scanResult: 'BLACKLISTED' },
       });
 
       return res.json({
@@ -86,7 +47,7 @@ export const scanController = {
 
     if (!ticket) {
       await prisma.scanLog.create({
-        data: { ticketId, eventId, scanResult: 'NOT_FOUND', scannerDevice },
+        data: { ticketId, eventId, scanResult: 'NOT_FOUND' },
       });
 
       return res.json({
@@ -98,7 +59,7 @@ export const scanController = {
 
     if (ticket.isUsed) {
       await prisma.scanLog.create({
-        data: { ticketId, eventId, scanResult: 'ALREADY_USED', scannerDevice },
+        data: { ticketId, eventId, scanResult: 'ALREADY_USED' },
       });
 
       return res.json({
@@ -115,7 +76,7 @@ export const scanController = {
     });
 
     await prisma.scanLog.create({
-      data: { ticketId, eventId, scanResult: 'SUCCESS', scannerDevice },
+      data: { ticketId, eventId, scanResult: 'SUCCESS' },
     });
 
     res.json({
@@ -130,27 +91,28 @@ export const scanController = {
     });
   }),
 
-  uploadScanLogs: asyncHandler(async (req, res) => {
-    const { logs } = req.body;
+  getScanLogs: asyncHandler(async (req, res) => {
+    const { eventId } = req.params;
 
-    if (!Array.isArray(logs) || logs.length === 0) {
-      throw new ApiError(400, 'Invalid logs data');
-    }
-
-    const createdLogs = await prisma.scanLog.createMany({
-      data: logs.map(log => ({
-        ticketId: log.ticketId,
-        eventId: log.eventId,
-        scanResult: log.scanResult,
-        scannerDevice: log.scannerDevice,
-        scannedAt: new Date(log.scannedAt),
-      })),
-      skipDuplicates: true,
+    const event = await prisma.event.findUnique({
+      where: { id: eventId, creatorId: req.user.id },
     });
 
-    res.json({
-      success: true,
-      message: `${createdLogs.count} scan logs uploaded`,
+    if (!event) throw new ApiError(404, 'Event not found');
+
+    const logs = await prisma.scanLog.findMany({
+      where: { eventId },
+      include: {
+        ticket: {
+          include: {
+            owner: { select: { username: true, displayName: true } },
+            ticketType: { select: { name: true } }
+          }
+        }
+      },
+      orderBy: { scannedAt: 'desc' }
     });
-  }),
+
+    res.json({ success: true, data: { logs } });
+  })
 };

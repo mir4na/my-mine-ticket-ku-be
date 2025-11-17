@@ -8,50 +8,30 @@ class TreasuryService {
     }
 
     calculateSplit(grossAmount) {
-        const taxAmount = Math.floor((grossAmount * config.platform.taxPercentage) / 100);
         const platformFee = Math.floor((grossAmount * config.platform.platformFeePercentage) / 100);
-        const netAmount = grossAmount - taxAmount - platformFee;
+        const netAmount = grossAmount - platformFee;
 
         return {
             grossAmount,
-            taxAmount,
             platformFee,
             netAmount,
         };
     }
 
-    async transferToTaxAndPlatform(taxAmount, platformFee) {
-        const results = { tax: null, platform: null };
-
-        if (config.platform.taxTransferMethod === 'direct') {
-            results.tax = await this.transferIDRToBank(taxAmount, {
-                bankName: config.platform.taxBankName,
-                accountNumber: config.platform.taxBankAccount,
-                accountHolder: config.platform.taxAccountHolder,
-            });
-        } else {
-            results.tax = {
-                method: 'hold',
-                amount: taxAmount,
-                note: 'Held in treasury for later withdrawal',
-            };
-        }
-
+    async transferToPlatform(platformFee) {
         if (config.platform.platformTransferMethod === 'direct') {
-            results.platform = await this.transferIDRToBank(platformFee, {
+            return await this.transferIDRToBank(platformFee, {
                 bankName: config.platform.platformBankName,
                 accountNumber: config.platform.platformBankAccount,
                 accountHolder: config.platform.platformAccountHolder,
             });
         } else {
-            results.platform = {
+            return {
                 method: 'hold',
                 amount: platformFee,
                 note: 'Held in treasury for later withdrawal',
             };
         }
-
-        return results;
     }
 
     async transferIDRToBank(amount, bankAccount) {
@@ -87,9 +67,9 @@ class TreasuryService {
     }
 
     async processTicketPurchase(eventId, buyerAddress, grossAmount, metadataURI) {
-        const { taxAmount, platformFee, netAmount } = this.calculateSplit(grossAmount);
+        const { platformFee, netAmount } = this.calculateSplit(grossAmount);
 
-        const taxPlatformTransfer = await this.transferToTaxAndPlatform(taxAmount, platformFee);
+        const platformTransfer = await this.transferToPlatform(platformFee);
 
         const mintTxHash = await this.mintWIDRForTicket(netAmount);
 
@@ -102,14 +82,34 @@ class TreasuryService {
 
         return {
             grossAmount,
-            taxAmount,
             platformFee,
             netAmount,
-            taxTransfer: taxPlatformTransfer.tax,
-            platformTransfer: taxPlatformTransfer.platform,
+            platformTransfer,
             mintTxHash,
             escrowTxHash: txHash,
             nftTokenId,
+        };
+    }
+
+    async processResalePayment(eventId, sellerAmount, resaleFee, platformFee, sellerEmail) {
+        const platformTransfer = await this.transferToPlatform(platformFee);
+
+        const sellerTransfer = await this.transferIDRToBank(sellerAmount, {
+            bankName: 'Seller Bank',
+            accountNumber: 'SELLER_ACCOUNT',
+            accountHolder: sellerEmail,
+        });
+
+        const resaleFeeTransfer = {
+            method: 'escrow',
+            amount: resaleFee,
+            note: 'Resale fee added to event revenue split',
+        };
+
+        return {
+            platformTransfer,
+            sellerTransfer,
+            resaleFeeTransfer
         };
     }
 

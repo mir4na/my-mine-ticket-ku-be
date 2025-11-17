@@ -1,4 +1,3 @@
-// routes/ticket.routes.js
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import { ticketController } from '../controllers/ticket.controller.js';
@@ -15,5 +14,7 @@ router.post('/:ticketId/claim-nft', authenticate, ticketController.claimNFT);
 
 router.post('/:ticketId/resale', authenticate, ticketController.createResaleListing);
 router.get('/resale/listings', ticketController.getResaleListings);
+router.post('/resale/:listingId/purchase', authenticate, ticketController.purchaseResaleTicket);
+router.post('/resale/payment-webhook', ticketController.handleResaleWebhook);
 
 export default router;

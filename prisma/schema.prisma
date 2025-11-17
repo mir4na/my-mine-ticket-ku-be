@@ -23,6 +23,8 @@ model User {
   revenueReceivers RevenueReceiver[]
   transactions    Transaction[]
   resaleListings  ResaleListing[]
+  resalePurchases ResaleTransaction[] @relation("ResaleBuyer")
+  resaleSales     ResaleTransaction[] @relation("ResaleSeller")
 }
 
 enum Role {
@@ -47,6 +49,7 @@ model Event {
   ticketTypes     TicketType[]
   revenueReceivers RevenueReceiver[]
   transactions    Transaction[]
+  resaleTransactions ResaleTransaction[]
   scanLogs        ScanLog[]
 }
 
@@ -167,6 +170,8 @@ model ResaleListing {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  resaleTransactions ResaleTransaction[]
+
   @@unique([ticketId, status])
 }
 
@@ -174,6 +179,27 @@ enum ResaleStatus {
   ACTIVE
   SOLD
   CANCELLED
+}
+
+model ResaleTransaction {
+  id              String   @id @default(uuid())
+  listingId       String
+  listing         ResaleListing @relation(fields: [listingId], references: [id])
+  buyerId         String
+  buyer           User     @relation("ResaleBuyer", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User     @relation("ResaleSeller", fields: [sellerId], references: [id])
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id])
+  amount          Float
+  resaleFee       Float?
+  platformFee     Float?
+  sellerAmount    Float?
+  paymentMethod   PaymentMethod
+  paymentStatus   PaymentStatus @default(PENDING)
+  externalTxId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Withdrawal {

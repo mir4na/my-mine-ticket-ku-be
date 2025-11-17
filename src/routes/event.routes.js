@@ -11,6 +11,7 @@ router.post('/:eventId/tickets', authenticate, authorize('EO'), eventController.
 router.get('/', eventController.getEvents);
 router.get('/my-events', authenticate, authorize('EO'), eventController.getMyEvents);
 router.get('/:id', eventController.getEventById);
+router.get('/:id/export-audit', authenticate, authorize('EO'), eventController.exportEventAudit);
 
 router.post('/:id/complete', authenticate, authorize('EO'), eventController.completeEvent);
 

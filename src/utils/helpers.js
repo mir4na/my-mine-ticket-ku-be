@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import { config } from '../config/index.js';
-import { ApiError } from './apiError.js';
 
 export const generateQRSignature = (ticketId, eventId) => {
   const data = `${ticketId}:${eventId}`;
@@ -39,12 +38,23 @@ export const paginate = (page = 1, limit = 10) => {
 };
 
 export const calculateRevenueSplit = (amount) => {
-  const taxAmount = (amount * config.platform.taxPercentage) / 100;
   const platformFee = (amount * config.platform.platformFeePercentage) / 100;
-  const netAmount = amount - taxAmount - platformFee;
+  const netAmount = amount - platformFee;
 
   return {
-    taxAmount,
+    platformFee,
+    netAmount,
+    grossAmount: amount,
+  };
+};
+
+export const calculateResaleSplit = (amount) => {
+  const resaleFee = (amount * config.platform.resaleFeePercentage) / 100;
+  const platformFee = (amount * config.platform.platformFeePercentage) / 100;
+  const netAmount = amount - resaleFee - platformFee;
+
+  return {
+    resaleFee,
     platformFee,
     netAmount,
     grossAmount: amount,

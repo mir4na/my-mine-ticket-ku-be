@@ -1,37 +1,34 @@
-# MyMineTicketKu API Documentation
+# MyMineTicketKu API - Complete Testing Guide
 
-Base URL: `http://localhost:5000/api`
-
-## Authentication
-
-Most endpoints require Bearer token authentication.
-
+## Base URL
 ```
-Authorization: Bearer <your_jwt_token>
+http://localhost:5000
 ```
 
 ---
 
-## 1. Authentication Endpoints
+## 1. AUTHENTICATION
 
-### 1.1 Register User
+### 1.1 Register User (Buyer)
+**Method:** `POST`  
+**Endpoint:** `/api/auth/register`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
 
-**POST** `/auth/register`
-
-Register new user (EO or regular user).
-
-**Request Body:**
+**Body:**
 ```json
 {
-  "username": "johndoe",
-  "displayName": "John Doe",
-  "email": "john@example.com",
+  "username": "buyer_test",
+  "displayName": "Test Buyer",
+  "email": "buyer@test.com",
   "password": "password123",
   "role": "USER"
 }
 ```
 
-**Response (201):**
+**Expected Response (201):**
 ```json
 {
   "success": true,
@@ -39,10 +36,10 @@ Register new user (EO or regular user).
   "data": {
     "user": {
       "id": "uuid",
-      "username": "johndoe",
-      "email": "john@example.com",
+      "username": "buyer_test",
+      "email": "buyer@test.com",
       "role": "USER",
-      "createdAt": "2025-01-01T00:00:00.000Z"
+      "createdAt": "2024-01-01T00:00:00.000Z"
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
@@ -51,21 +48,101 @@ Register new user (EO or regular user).
 
 ---
 
-### 1.2 Login
+### 1.2 Register Event Organizer
+**Method:** `POST`  
+**Endpoint:** `/api/auth/register`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
 
-**POST** `/auth/login`
-
-Login with email/username and password.
-
-**Request Body:**
+**Body:**
 ```json
 {
-  "identifier": "john@example.com",
+  "username": "eo_test",
+  "displayName": "Test Event Organizer",
+  "email": "eo@test.com",
+  "password": "password123",
+  "role": "EO"
+}
+```
+
+**Expected Response (201):**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "username": "eo_test",
+      "email": "eo@test.com",
+      "role": "EO",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+---
+
+### 1.3 Register SuperAdmin
+**Method:** `POST`  
+**Endpoint:** `/api/auth/register`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "username": "admin_test",
+  "displayName": "Test Admin",
+  "email": "admin@test.com",
+  "password": "password123",
+  "role": "SUPERADMIN"
+}
+```
+
+**Expected Response (201):**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "uuid",
+      "username": "admin_test",
+      "email": "admin@test.com",
+      "role": "SUPERADMIN",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+---
+
+### 1.4 Login
+**Method:** `POST`  
+**Endpoint:** `/api/auth/login`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "identifier": "buyer@test.com",
   "password": "password123"
 }
 ```
 
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -73,8 +150,8 @@ Login with email/username and password.
   "data": {
     "user": {
       "id": "uuid",
-      "username": "johndoe",
-      "email": "john@example.com",
+      "username": "buyer_test",
+      "email": "buyer@test.com",
       "role": "USER",
       "walletAddress": null
     },
@@ -85,30 +162,29 @@ Login with email/username and password.
 
 ---
 
-### 1.3 Get Profile
-
-**GET** `/auth/profile`
-
-Get current user profile.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+### 1.5 Get Profile
+**Method:** `GET`  
+**Endpoint:** `/api/auth/profile`  
+**Headers:** 
+```json
+Authorization: Bearer {token}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "user": {
       "id": "uuid",
-      "username": "johndoe",
-      "displayName": "John Doe",
-      "email": "john@example.com",
+      "username": "buyer_test",
+      "displayName": "Test Buyer",
+      "email": "buyer@test.com",
       "role": "USER",
       "walletAddress": null,
-      "createdAt": "2025-01-01T00:00:00.000Z"
+      "createdAt": "2024-01-01T00:00:00.000Z"
     }
   }
 }
@@ -116,63 +192,23 @@ Authorization: Bearer <token>
 
 ---
 
-### 1.4 Update Profile
-
-**PUT** `/auth/profile`
-
-Update user profile.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+### 1.6 Connect Wallet
+**Method:** `POST`  
+**Endpoint:** `/api/auth/connect-wallet`  
+**Headers:** 
+```json
+Authorization: Bearer {token}
+Content-Type: application/json
 ```
 
-**Request Body:**
+**Body:**
 ```json
 {
-  "displayName": "John Updated",
-  "walletAddress": "0x1234567890abcdef1234567890abcdef12345678"
+  "walletAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 }
 ```
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Profile updated successfully",
-  "data": {
-    "user": {
-      "id": "uuid",
-      "username": "johndoe",
-      "displayName": "John Updated",
-      "email": "john@example.com",
-      "walletAddress": "0x1234567890abcdef1234567890abcdef12345678"
-    }
-  }
-}
-```
-
----
-
-### 1.5 Connect Wallet
-
-**POST** `/auth/connect-wallet`
-
-Connect cryptocurrency wallet to account.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
-```json
-{
-  "walletAddress": "0x1234567890abcdef1234567890abcdef12345678"
-}
-```
-
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -180,9 +216,9 @@ Authorization: Bearer <token>
   "data": {
     "user": {
       "id": "uuid",
-      "username": "johndoe",
-      "email": "john@example.com",
-      "walletAddress": "0x1234567890abcdef1234567890abcdef12345678"
+      "username": "buyer_test",
+      "email": "buyer@test.com",
+      "walletAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
     }
   }
 }
@@ -190,60 +226,55 @@ Authorization: Bearer <token>
 
 ---
 
-## 2. Event Endpoints
+## 2. EVENT MANAGEMENT (EO Only)
 
-### 2.1 Create Event
-
-**POST** `/events`
-
-Create new event (EO only).
-
-**Headers:**
-```
-Authorization: Bearer <eo_token>
+### 2.1 Create Event with Revenue Receivers
+**Method:** `POST`  
+**Endpoint:** `/api/events`  
+**Headers:** 
+```json
+Authorization: Bearer {eoToken}
+Content-Type: application/json
 ```
 
-**Request Body:**
+**Body:**
 ```json
 {
-  "name": "Music Festival 2025",
+  "name": "Summer Music Festival 2024",
   "bannerUrl": "https://example.com/banner.jpg",
   "location": "Jakarta Convention Center",
-  "startDate": "2025-12-01T18:00:00Z",
-  "endDate": "2025-12-01T23:00:00Z",
+  "startDate": "2024-08-15T18:00:00.000Z",
+  "endDate": "2024-08-15T23:00:00.000Z",
   "receivers": [
     {
-      "email": "artist@example.com",
+      "email": "receiver1@test.com",
       "percentage": 60
     },
     {
-      "email": "venue@example.com",
-      "percentage": 30
-    },
-    {
-      "email": "sponsor@example.com",
-      "percentage": 10
+      "email": "receiver2@test.com",
+      "percentage": 40
     }
   ]
 }
 ```
 
-**Response (201):**
+**Expected Response (201):**
 ```json
 {
   "success": true,
-  "message": "Event created successfully. Tax (10%) and Platform Fee (2.5%) will be automatically deducted.",
+  "message": "Event created successfully. Platform Fee (2.5%) will be automatically deducted.",
   "data": {
     "event": {
-      "id": "uuid",
-      "name": "Music Festival 2025",
+      "id": "event-uuid",
+      "name": "Summer Music Festival 2024",
       "bannerUrl": "https://example.com/banner.jpg",
       "location": "Jakarta Convention Center",
-      "startDate": "2025-12-01T18:00:00.000Z",
-      "endDate": "2025-12-01T23:00:00.000Z",
+      "startDate": "2024-08-15T18:00:00.000Z",
+      "endDate": "2024-08-15T23:00:00.000Z",
       "status": "PENDING_APPROVAL",
-      "creatorId": "uuid",
-      "createdAt": "2025-01-01T00:00:00.000Z"
+      "creatorId": "eo-uuid",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
     }
   }
 }
@@ -251,23 +282,25 @@ Authorization: Bearer <eo_token>
 
 ---
 
-### 2.2 Approve Revenue Split
+### 2.2 Approve Revenue Split (Receiver)
+**Method:** `POST`  
+**Endpoint:** `/api/events/{eventId}/approve/{email}`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
 
-**POST** `/events/:eventId/approve/:email`
-
-Approve or reject revenue split invitation.
-
-**Request Body:**
+**Body:**
 ```json
 {
   "approved": true,
   "bankAccount": "1234567890",
-  "bankName": "Bank BCA",
-  "accountHolder": "Artist Name"
+  "bankName": "Bank Mandiri",
+  "accountHolder": "John Doe"
 }
 ```
 
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -275,20 +308,34 @@ Approve or reject revenue split invitation.
 }
 ```
 
+**Body (Rejection):**
+```json
+{
+  "approved": false,
+  "rejectionReason": "I don't want to participate"
+}
+```
+
+**Expected Response (200):**
+```json
+{
+  "success": true,
+  "message": "Revenue split rejected"
+}
+```
+
 ---
 
-### 2.3 Configure Tickets
-
-**POST** `/events/:eventId/tickets`
-
-Configure ticket types for event (EO only).
-
-**Headers:**
-```
-Authorization: Bearer <eo_token>
+### 2.3 Configure Ticket Types
+**Method:** `POST`  
+**Endpoint:** `/api/events/{eventId}/tickets`  
+**Headers:** 
+```json
+Authorization: Bearer {eoToken}
+Content-Type: application/json
 ```
 
-**Request Body:**
+**Body:**
 ```json
 {
   "ticketTypes": [
@@ -296,21 +343,21 @@ Authorization: Bearer <eo_token>
       "name": "VIP",
       "price": 500000,
       "stock": 100,
-      "saleStartDate": "2025-11-01T00:00:00Z",
-      "saleEndDate": "2025-12-01T17:00:00Z"
+      "saleStartDate": "2024-07-01T00:00:00.000Z",
+      "saleEndDate": "2024-08-15T17:00:00.000Z"
     },
     {
       "name": "Regular",
       "price": 250000,
       "stock": 500,
-      "saleStartDate": "2025-11-01T00:00:00Z",
-      "saleEndDate": "2025-12-01T17:00:00Z"
+      "saleStartDate": "2024-07-01T00:00:00.000Z",
+      "saleEndDate": "2024-08-15T17:00:00.000Z"
     }
   ]
 }
 ```
 
-**Response (201):**
+**Expected Response (201):**
 ```json
 {
   "success": true,
@@ -318,14 +365,28 @@ Authorization: Bearer <eo_token>
   "data": {
     "ticketTypes": [
       {
-        "id": "uuid",
-        "eventId": "uuid",
+        "id": "ticket-type-uuid-1",
+        "eventId": "event-uuid",
         "name": "VIP",
         "price": 500000,
         "stock": 100,
         "sold": 0,
-        "saleStartDate": "2025-11-01T00:00:00.000Z",
-        "saleEndDate": "2025-12-01T17:00:00.000Z"
+        "saleStartDate": "2024-07-01T00:00:00.000Z",
+        "saleEndDate": "2024-08-15T17:00:00.000Z",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
+      },
+      {
+        "id": "ticket-type-uuid-2",
+        "eventId": "event-uuid",
+        "name": "Regular",
+        "price": 250000,
+        "stock": 500,
+        "sold": 0,
+        "saleStartDate": "2024-07-01T00:00:00.000Z",
+        "saleEndDate": "2024-08-15T17:00:00.000Z",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z"
       }
     ]
   }
@@ -334,37 +395,43 @@ Authorization: Bearer <eo_token>
 
 ---
 
-### 2.4 Get All Events
+### 2.4 Get All Events (Public)
+**Method:** `GET`  
+**Endpoint:** `/api/events?page=1&limit=10&status=ACCEPTED&location=Jakarta`  
+**Headers:** None
 
-**GET** `/events?page=1&limit=10&status=ACCEPTED&location=Jakarta`
+**Body:** None
 
-Get list of events with pagination and filters.
-
-**Query Parameters:**
-- `page` (optional, default: 1)
-- `limit` (optional, default: 10)
-- `status` (optional, default: ACCEPTED)
-- `location` (optional)
-
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "events": [
       {
-        "id": "uuid",
-        "name": "Music Festival 2025",
+        "id": "event-uuid",
+        "name": "Summer Music Festival 2024",
         "bannerUrl": "https://example.com/banner.jpg",
         "location": "Jakarta Convention Center",
-        "startDate": "2025-12-01T18:00:00.000Z",
-        "endDate": "2025-12-01T23:00:00.000Z",
+        "startDate": "2024-08-15T18:00:00.000Z",
+        "endDate": "2024-08-15T23:00:00.000Z",
         "status": "ACCEPTED",
+        "creatorId": "eo-uuid",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
         "creator": {
-          "username": "eo_user",
-          "displayName": "EO Company"
+          "username": "eo_test",
+          "displayName": "Test Event Organizer"
         },
-        "ticketTypes": [],
+        "ticketTypes": [
+          {
+            "id": "ticket-type-uuid-1",
+            "name": "VIP",
+            "price": 500000,
+            "stock": 100,
+            "sold": 0
+          }
+        ],
         "_count": {
           "transactions": 0
         }
@@ -383,31 +450,35 @@ Get list of events with pagination and filters.
 ---
 
 ### 2.5 Get Event by ID
+**Method:** `GET`  
+**Endpoint:** `/api/events/{eventId}`  
+**Headers:** None
 
-**GET** `/events/:id`
+**Body:** None
 
-Get detailed event information.
-
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "event": {
-      "id": "uuid",
-      "name": "Music Festival 2025",
+      "id": "event-uuid",
+      "name": "Summer Music Festival 2024",
       "bannerUrl": "https://example.com/banner.jpg",
       "location": "Jakarta Convention Center",
-      "startDate": "2025-12-01T18:00:00.000Z",
-      "endDate": "2025-12-01T23:00:00.000Z",
+      "startDate": "2024-08-15T18:00:00.000Z",
+      "endDate": "2024-08-15T23:00:00.000Z",
       "status": "ACCEPTED",
+      "creatorId": "eo-uuid",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
       "creator": {
-        "username": "eo_user",
-        "displayName": "EO Company"
+        "username": "eo_test",
+        "displayName": "Test Event Organizer"
       },
       "ticketTypes": [
         {
-          "id": "uuid",
+          "id": "ticket-type-uuid-1",
           "name": "VIP",
           "price": 500000,
           "stock": 100,
@@ -416,7 +487,7 @@ Get detailed event information.
       ],
       "revenueReceivers": [
         {
-          "email": "artist@example.com",
+          "email": "receiver1@test.com",
           "percentage": 60,
           "approvalStatus": "APPROVED",
           "walletAddress": "0x..."
@@ -429,31 +500,30 @@ Get detailed event information.
 
 ---
 
-### 2.6 Get My Events
-
-**GET** `/events/my-events`
-
-Get events created by current EO.
-
-**Headers:**
-```
-Authorization: Bearer <eo_token>
+### 2.6 Get My Events (EO)
+**Method:** `GET`  
+**Endpoint:** `/api/events/my-events`  
+**Headers:** 
+```json
+Authorization: Bearer {eoToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "events": [
       {
-        "id": "uuid",
-        "name": "Music Festival 2025",
+        "id": "event-uuid",
+        "name": "Summer Music Festival 2024",
         "status": "ACCEPTED",
-        "ticketTypes": [],
-        "revenueReceivers": [],
+        "ticketTypes": [...],
+        "revenueReceivers": [...],
         "_count": {
-          "transactions": 0
+          "transactions": 5
         }
       }
     ]
@@ -463,129 +533,151 @@ Authorization: Bearer <eo_token>
 
 ---
 
-### 2.7 Complete Event
-
-**POST** `/events/:id/complete`
-
-Mark event as completed and trigger revenue split (EO only).
-
-**Headers:**
-```
-Authorization: Bearer <eo_token>
+### 2.7 Complete Event (EO)
+**Method:** `POST`  
+**Endpoint:** `/api/events/{eventId}/complete`  
+**Headers:** 
+```json
+Authorization: Bearer {eoToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "message": "Event completed and revenue split initiated",
   "data": {
-    "txHash": "0xabcdef123456..."
+    "txHash": "0x1234567890abcdef..."
   }
 }
 ```
 
 ---
 
-## 3. Ticket Endpoints
+### 2.8 Export Event Audit (EO)
+**Method:** `GET`  
+**Endpoint:** `/api/events/{eventId}/export-audit`  
+**Headers:** 
+```json
+Authorization: Bearer {eoToken}
+```
+
+**Body:** None
+
+**Expected Response (200):**
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename=audit-Summer-Music-Festival-2024-1234567890.pdf
+
+[PDF Binary Data]
+```
+
+---
+
+## 3. TICKET PURCHASE & MANAGEMENT
 
 ### 3.1 Purchase Ticket
-
-**POST** `/tickets/purchase`
-
-Purchase a ticket.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+**Method:** `POST`  
+**Endpoint:** `/api/tickets/purchase`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
+Content-Type: application/json
 ```
 
-**Request Body:**
+**Body:**
 ```json
 {
-  "ticketTypeId": "uuid",
-  "paymentMethod": "QRIS"
+  "ticketTypeId": "ticket-type-uuid-1",
+  "paymentMethod": "BANK_TRANSFER"
 }
 ```
 
-**Response (200):**
+**Expected Response (201):**
 ```json
 {
   "success": true,
-  "message": "Transaction started",
+  "message": "Transaction initiated",
   "data": {
-    "transaction": {
-      "id": "uuid",
-      "amount": 500000,
-      "paymentStatus": "PENDING"
-    },
-    "payment": {
-      "token": "midtrans-token",
-      "redirect_url": "https://payment-gateway.com/..."
-    }
+    "transactionId": "transaction-uuid",
+    "paymentToken": "midtrans-token-123",
+    "redirectUrl": "https://app.sandbox.midtrans.com/snap/v2/vtweb/midtrans-token-123"
   }
 }
 ```
 
 ---
 
-### 3.2 Payment Webhook
+### 3.2 Payment Webhook (Midtrans)
+**Method:** `POST`  
+**Endpoint:** `/api/tickets/payment-webhook`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
 
-**POST** `/tickets/payment-webhook`
-
-Webhook endpoint for payment gateway (Midtrans).
-
-**Request Body:**
+**Body:**
 ```json
 {
-  "order_id": "uuid",
   "transaction_status": "settlement",
+  "order_id": "transaction-uuid",
+  "gross_amount": "500000",
   "fraud_status": "accept"
 }
 ```
 
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
-  "success": true,
-  "message": "Webhook processed"
+  "success": true
 }
 ```
 
 ---
 
 ### 3.3 Get My Tickets
-
-**GET** `/tickets/my-tickets`
-
-Get all tickets owned by current user.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+**Method:** `GET`  
+**Endpoint:** `/api/tickets/my-tickets`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "tickets": [
       {
-        "id": "uuid",
+        "id": "ticket-uuid",
+        "ticketTypeId": "ticket-type-uuid-1",
+        "ownerId": "user-uuid",
         "purchasePrice": 500000,
         "nftTokenId": "0",
-        "nftMetadataUri": "ipfs://...",
+        "nftMetadataUri": "https://ipfs.io/ipfs/QmXxx...",
         "eligibleForResale": true,
         "isUsed": false,
+        "usedAt": null,
+        "qrSignature": "abc123...",
+        "pdfVersion": 1,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
         "ticketType": {
+          "id": "ticket-type-uuid-1",
           "name": "VIP",
+          "price": 500000,
           "event": {
-            "id": "uuid",
-            "name": "Music Festival 2025",
+            "id": "event-uuid",
+            "name": "Summer Music Festival 2024",
             "bannerUrl": "https://example.com/banner.jpg",
             "location": "Jakarta Convention Center",
-            "startDate": "2025-12-01T18:00:00.000Z"
+            "startDate": "2024-08-15T18:00:00.000Z",
+            "endDate": "2024-08-15T23:00:00.000Z"
           }
         }
       }
@@ -597,37 +689,46 @@ Authorization: Bearer <token>
 ---
 
 ### 3.4 Get Ticket Detail
-
-**GET** `/tickets/:id`
-
-Get ticket detail with QR code data.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+**Method:** `GET`  
+**Endpoint:** `/api/tickets/{ticketId}`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "ticket": {
-      "id": "uuid",
+      "id": "ticket-uuid",
+      "ticketTypeId": "ticket-type-uuid-1",
+      "ownerId": "user-uuid",
       "purchasePrice": 500000,
       "nftTokenId": "0",
+      "nftMetadataUri": "https://ipfs.io/ipfs/QmXxx...",
+      "eligibleForResale": true,
       "isUsed": false,
+      "usedAt": null,
+      "qrSignature": "abc123...",
+      "pdfVersion": 1,
       "ticketType": {
         "name": "VIP",
+        "price": 500000,
         "event": {
-          "name": "Music Festival 2025"
+          "name": "Summer Music Festival 2024",
+          "location": "Jakarta Convention Center"
         }
+      },
+      "owner": {
+        "username": "buyer_test",
+        "displayName": "Test Buyer",
+        "email": "buyer@test.com",
+        "walletAddress": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
       }
-    },
-    "qrData": {
-      "ticket_id": "uuid",
-      "event_id": "uuid",
-      "signature": "hmac-signature"
     }
   }
 }
@@ -636,73 +737,62 @@ Authorization: Bearer <token>
 ---
 
 ### 3.5 Claim NFT
-
-**POST** `/tickets/:ticketId/claim-nft`
-
-Claim NFT to personal wallet.
-
-**Headers:**
-```
-Authorization: Bearer <token>
-```
-
-**Request Body:**
+**Method:** `POST`  
+**Endpoint:** `/api/tickets/{ticketId}/claim-nft`  
+**Headers:** 
 ```json
-{
-  "walletAddress": "0x1234567890abcdef1234567890abcdef12345678"
-}
+Authorization: Bearer {userToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "message": "NFT claimed successfully",
   "data": {
-    "txHash": "0xabcdef123456..."
+    "txHash": "0x1234567890abcdef...",
+    "nftTokenId": "0",
+    "explorerUrl": "https://sepolia.etherscan.io/tx/0x1234567890abcdef..."
   }
 }
 ```
 
 ---
 
-### 3.6 Create Resale Listing
+## 4. TICKET RESALE
 
-**POST** `/tickets/:ticketId/resale`
-
-List ticket for resale (max 120% of original price).
-
-**Headers:**
+### 4.1 Create Resale Listing
+**Method:** `POST`  
+**Endpoint:** `/api/tickets/{ticketId}/resale`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
+Content-Type: application/json
 ```
-Authorization: Bearer <token>
-```
 
-**Request Body:**
+**Body:**
 ```json
 {
-  "price": 600000
+  "price": 550000
 }
 ```
 
-**Response (201):**
+**Expected Response (201):**
 ```json
 {
   "success": true,
-  "message": "Resale listing created",
+  "message": "Ticket listed for resale",
   "data": {
     "listing": {
-      "id": "uuid",
-      "ticketId": "uuid",
-      "price": 600000,
+      "id": "listing-uuid",
+      "ticketId": "ticket-uuid",
+      "sellerId": "user-uuid",
+      "price": 550000,
       "status": "ACTIVE",
-      "ticket": {
-        "ticketType": {
-          "name": "VIP",
-          "event": {
-            "name": "Music Festival 2025"
-          }
-        }
-      }
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
     }
   }
 }
@@ -710,36 +800,38 @@ Authorization: Bearer <token>
 
 ---
 
-### 3.7 Get Resale Listings
+### 4.2 Get Resale Listings
+**Method:** `GET`  
+**Endpoint:** `/api/tickets/resale/listings?eventId={eventId}`  
+**Headers:** None
 
-**GET** `/tickets/resale/listings?eventId=uuid`
+**Body:** None
 
-Get available resale listings.
-
-**Query Parameters:**
-- `eventId` (optional) - Filter by event
-
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "listings": [
       {
-        "id": "uuid",
-        "price": 600000,
+        "id": "listing-uuid",
+        "ticketId": "ticket-uuid",
+        "sellerId": "user-uuid",
+        "price": 550000,
         "status": "ACTIVE",
+        "createdAt": "2024-01-01T00:00:00.000Z",
         "ticket": {
+          "id": "ticket-uuid",
+          "purchasePrice": 500000,
           "ticketType": {
             "name": "VIP",
+            "price": 500000,
             "event": {
-              "name": "Music Festival 2025"
+              "name": "Summer Music Festival 2024",
+              "location": "Jakarta Convention Center",
+              "startDate": "2024-08-15T18:00:00.000Z"
             }
           }
-        },
-        "seller": {
-          "username": "seller_user",
-          "displayName": "Seller Name"
         }
       }
     ]
@@ -749,34 +841,223 @@ Get available resale listings.
 
 ---
 
-## 4. User Endpoints
-
-### 4.1 Get My Transactions
-
-**GET** `/users/transactions`
-
-Get transaction history.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+### 4.3 Purchase Resale Ticket
+**Method:** `POST`  
+**Endpoint:** `/api/tickets/resale/{listingId}/purchase`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
+Content-Type: application/json
 ```
 
-**Response (200):**
+**Body:**
+```json
+{
+  "paymentMethod": "BANK_TRANSFER"
+}
+```
+
+**Expected Response (201):**
+```json
+{
+  "success": true,
+  "message": "Resale transaction initiated",
+  "data": {
+    "transactionId": "resale-transaction-uuid",
+    "paymentToken": "midtrans-token-456",
+    "redirectUrl": "https://app.sandbox.midtrans.com/snap/v2/vtweb/midtrans-token-456"
+  }
+}
+```
+
+---
+
+### 4.4 Resale Payment Webhook
+**Method:** `POST`  
+**Endpoint:** `/api/tickets/resale/payment-webhook`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "transaction_status": "settlement",
+  "order_id": "resale-transaction-uuid",
+  "gross_amount": "550000",
+  "fraud_status": "accept"
+}
+```
+
+**Expected Response (200):**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+## 5. TICKET SCANNING
+
+### 5.1 Scan Ticket (QR Code)
+**Method:** `POST`  
+**Endpoint:** `/api/scan/scan`  
+**Headers:** 
+```json
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "ticketId": "ticket-uuid",
+  "eventId": "event-uuid",
+  "signature": "abc123..."
+}
+```
+
+**Expected Response - Valid (200):**
+```json
+{
+  "success": true,
+  "result": "SUCCESS",
+  "message": "WELCOME - TICKET VALID",
+  "ticket": {
+    "owner": "Test Buyer",
+    "ticketType": "VIP",
+    "event": "Summer Music Festival 2024"
+  }
+}
+```
+
+**Expected Response - Already Used (200):**
+```json
+{
+  "success": false,
+  "result": "ALREADY_USED",
+  "message": "Ticket already used at 2024-01-01T10:30:00.000Z",
+  "usedAt": "2024-01-01T10:30:00.000Z"
+}
+```
+
+**Expected Response - Invalid Signature (200):**
+```json
+{
+  "success": false,
+  "result": "INVALID_SIGNATURE",
+  "message": "QR code signature is invalid or tampered"
+}
+```
+
+**Expected Response - Blacklisted (200):**
+```json
+{
+  "success": false,
+  "result": "BLACKLISTED",
+  "message": "This ticket has been blacklisted"
+}
+```
+
+---
+
+### 5.2 Get Scan Logs (EO)
+**Method:** `GET`  
+**Endpoint:** `/api/scan/logs/{eventId}`  
+**Headers:** 
+```json
+Authorization: Bearer {eoToken}
+```
+
+**Body:** None
+
+**Expected Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "logs": [
+      {
+        "id": "log-uuid",
+        "ticketId": "ticket-uuid",
+        "eventId": "event-uuid",
+        "scannedAt": "2024-01-01T10:30:00.000Z",
+        "scannerDevice": null,
+        "scanResult": "SUCCESS",
+        "ticket": {
+          "id": "ticket-uuid",
+          "owner": {
+            "username": "buyer_test",
+            "displayName": "Test Buyer"
+          },
+          "ticketType": {
+            "name": "VIP"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 6. USER DASHBOARD
+
+### 6.1 Get My Tickets
+**Method:** `GET`  
+**Endpoint:** `/api/users/tickets`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
+```
+
+**Body:** None
+
+**Expected Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "tickets": [...]
+  }
+}
+```
+
+---
+
+### 6.2 Get My Transactions
+**Method:** `GET`  
+**Endpoint:** `/api/users/transactions`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
+```
+
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "transactions": [
       {
-        "id": "uuid",
+        "id": "transaction-uuid",
+        "ticketTypeId": "ticket-type-uuid-1",
+        "ticketId": "ticket-uuid",
+        "buyerId": "user-uuid",
+        "eventId": "event-uuid",
         "amount": 500000,
-        "paymentMethod": "QRIS",
+        "paymentMethod": "BANK_TRANSFER",
         "paymentStatus": "PAID",
-        "createdAt": "2025-01-01T00:00:00.000Z",
+        "externalTxId": "midtrans-token-123",
+        "txHash": "0x1234...",
+        "createdAt": "2024-01-01T00:00:00.000Z",
         "event": {
-          "id": "uuid",
-          "name": "Music Festival 2025",
+          "id": "event-uuid",
+          "name": "Summer Music Festival 2024",
           "bannerUrl": "https://example.com/banner.jpg"
         }
       }
@@ -787,35 +1068,42 @@ Authorization: Bearer <token>
 
 ---
 
-### 4.2 Get My Revenue Receivers
-
-**GET** `/users/revenue-receivers`
-
-Get revenue receiver records for current user.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+### 6.3 Get My Revenue Receivers
+**Method:** `GET`  
+**Endpoint:** `/api/users/revenue-receivers`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "receivers": [
       {
-        "id": "uuid",
-        "email": "user@example.com",
+        "id": "receiver-uuid",
+        "eventId": "event-uuid",
+        "email": "receiver1@test.com",
         "percentage": 60,
         "approvalStatus": "APPROVED",
         "walletAddress": "0x...",
         "event": {
-          "id": "uuid",
-          "name": "Music Festival 2025",
+          "id": "event-uuid",
+          "name": "Summer Music Festival 2024",
           "status": "COMPLETED"
         },
-        "withdrawals": []
+        "withdrawals": [
+          {
+            "id": "withdrawal-uuid",
+            "amount": 3000000,
+            "status": "COMPLETED",
+            "createdAt": "2024-01-01T00:00:00.000Z"
+          }
+        ]
       }
     ]
   }
@@ -824,18 +1112,17 @@ Authorization: Bearer <token>
 
 ---
 
-### 4.3 Get Dashboard Stats
-
-**GET** `/users/dashboard`
-
-Get user dashboard statistics.
-
-**Headers:**
-```
-Authorization: Bearer <token>
+### 6.4 Get Dashboard Stats
+**Method:** `GET`  
+**Endpoint:** `/api/users/dashboard`  
+**Headers:** 
+```json
+Authorization: Bearer {userToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -849,20 +1136,19 @@ Authorization: Bearer <token>
 
 ---
 
-## 5. Admin Endpoints (SUPERADMIN only)
+## 7. ADMIN OPERATIONS
 
-### 5.1 Get Platform Stats
-
-**GET** `/admin/stats`
-
-Get platform-wide statistics.
-
-**Headers:**
-```
-Authorization: Bearer <superadmin_token>
+### 7.1 Get Platform Stats
+**Method:** `GET`  
+**Endpoint:** `/api/admin/stats`  
+**Headers:** 
+```json
+Authorization: Bearer {adminToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -870,76 +1156,46 @@ Authorization: Bearer <superadmin_token>
     "totalEvents": 10,
     "totalTickets": 150,
     "totalRevenue": 75000000,
-    "totalUsers": 200
+    "totalUsers": 250
   }
 }
 ```
 
 ---
 
-### 5.2 Update Platform Config
-
-**POST** `/admin/config`
-
-Update platform configuration.
-
-**Headers:**
-```
-Authorization: Bearer <superadmin_token>
-```
-
-**Request Body:**
+### 7.2 Get Revenue Report
+**Method:** `GET`  
+**Endpoint:** `/api/admin/revenue-report/{eventId}`  
+**Headers:** 
 ```json
-{
-  "key": "max_resale_percentage",
-  "value": "120"
-}
+Authorization: Bearer {adminToken}
 ```
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Configuration updated",
-  "data": {
-    "config": {
-      "id": "uuid",
-      "key": "max_resale_percentage",
-      "value": "120"
-    }
-  }
-}
-```
+**Body:** None
 
----
-
-### 5.3 Get Revenue Report
-
-**GET** `/admin/revenue-report/:eventId`
-
-Get detailed revenue report for an event.
-
-**Headers:**
-```
-Authorization: Bearer <superadmin_token>
-```
-
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "data": {
     "report": {
-      "eventId": "uuid",
-      "eventName": "Music Festival 2025",
+      "eventId": "event-uuid",
+      "eventName": "Summer Music Festival 2024",
       "totalRevenue": 50000000,
       "receivers": [
         {
-          "email": "artist@example.com",
+          "email": "receiver1@test.com",
           "walletAddress": "0x...",
           "percentage": 60,
           "expectedAmount": 30000000,
-          "withdrawals": []
+          "withdrawals": [
+            {
+              "id": "withdrawal-uuid",
+              "amount": 30000000,
+              "status": "COMPLETED",
+              "createdAt": "2024-01-01T00:00:00.000Z"
+            }
+          ]
         }
       ]
     }
@@ -949,55 +1205,56 @@ Authorization: Bearer <superadmin_token>
 
 ---
 
-### 5.4 Process Receiver Withdrawal
-
-**POST** `/admin/withdrawal/receiver`
-
-Process withdrawal for a revenue receiver.
-
-**Headers:**
-```
-Authorization: Bearer <superadmin_token>
+### 7.3 Process Receiver Withdrawal
+**Method:** `POST`  
+**Endpoint:** `/api/admin/withdrawal/receiver`  
+**Headers:** 
+```json
+Authorization: Bearer {adminToken}
+Content-Type: application/json
 ```
 
-**Request Body:**
+**Body:**
 ```json
 {
-  "receiverId": "uuid"
+  "receiverId": "receiver-uuid"
 }
 ```
 
-**Response (200):**
+**Expected Response (200):**
 ```json
 {
   "success": true,
   "message": "Withdrawal processed successfully",
   "data": {
     "withdrawal": {
-      "id": "uuid",
+      "id": "withdrawal-uuid",
+      "receiverId": "receiver-uuid",
       "amount": 30000000,
-      "status": "COMPLETED"
+      "wIDRAmount": 30000000,
+      "status": "COMPLETED",
+      "txHash": "0x1234...",
+      "createdAt": "2024-01-01T00:00:00.000Z"
     },
-    "withdrawTxHash": "0xabcdef...",
-    "burnTxHash": "0x123456..."
+    "withdrawTxHash": "0x1234...",
+    "burnTxHash": "0x5678..."
   }
 }
 ```
 
 ---
 
-### 5.5 Process Tax Withdrawal
-
-**POST** `/admin/withdrawal/tax`
-
-Withdraw accumulated tax to government account.
-
-**Headers:**
-```
-Authorization: Bearer <superadmin_token>
+### 7.4 Process Tax Withdrawal
+**Method:** `POST`  
+**Endpoint:** `/api/admin/withdrawal/tax`  
+**Headers:** 
+```json
+Authorization: Bearer {adminToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -1007,12 +1264,14 @@ Authorization: Bearer <superadmin_token>
     "transfer": {
       "success": true,
       "method": "bank_transfer",
-      "transferId": "TRF-123456",
+      "transferId": "TRF-1234567890",
+      "amount": 5000000,
       "bankAccount": {
-        "bankName": "Bank BRI",
-        "accountNumber": "1234567890",
-        "accountHolder": "Kementerian Keuangan RI"
-      }
+        "bankName": "Bank Mandiri",
+        "accountNumber": "9876543210",
+        "accountHolder": "Tax Authority"
+      },
+      "timestamp": "2024-01-01T00:00:00.000Z"
     }
   }
 }
@@ -1020,18 +1279,17 @@ Authorization: Bearer <superadmin_token>
 
 ---
 
-### 5.6 Process Platform Withdrawal
-
-**POST** `/admin/withdrawal/platform`
-
-Withdraw platform fees.
-
-**Headers:**
-```
-Authorization: Bearer <superadmin_token>
+### 7.5 Process Platform Fee Withdrawal
+**Method:** `POST`  
+**Endpoint:** `/api/admin/withdrawal/platform`  
+**Headers:** 
+```json
+Authorization: Bearer {adminToken}
 ```
 
-**Response (200):**
+**Body:** None
+
+**Expected Response (200):**
 ```json
 {
   "success": true,
@@ -1041,12 +1299,14 @@ Authorization: Bearer <superadmin_token>
     "transfer": {
       "success": true,
       "method": "bank_transfer",
-      "transferId": "TRF-789012",
+      "transferId": "TRF-0987654321",
+      "amount": 1250000,
       "bankAccount": {
         "bankName": "Bank BCA",
-        "accountNumber": "0987654321",
-        "accountHolder": "PT MyMineTicketKu"
-      }
+        "accountNumber": "1234567890",
+        "accountHolder": "MyMineTicketKu Platform"
+      },
+      "timestamp": "2024-01-01T00:00:00.000Z"
     }
   }
 }
@@ -1054,184 +1314,232 @@ Authorization: Bearer <superadmin_token>
 
 ---
 
-## 6. Scan Endpoints
-
-### 6.1 Download Offline Package
-
-**GET** `/scan/download-package/:eventId`
-
-Download offline ticket scanning package for event (EO only).
-
-**Headers:**
-```
-Authorization: Bearer <eo_token>
+### 7.6 Update Platform Config
+**Method:** `POST`  
+**Endpoint:** `/api/admin/config`  
+**Headers:** 
+```json
+Authorization: Bearer {adminToken}
+Content-Type: application/json
 ```
 
-**Response (200):**
+**Body:**
 ```json
 {
-  "event_id": "uuid",
-  "event_name": "Music Festival 2025",
-  "event_date": "2025-12-01T18:00:00.000Z",
-  "tickets": [
-    {
-      "ticket_id": "uuid",
-      "signature": "hmac-signature",
-      "status": "unused",
-      "owner_name": "johndoe",
-      "pdf_version": 1
-    }
-  ],
-  "blacklisted": [],
-  "generated_at": "2025-01-01T00:00:00.000Z"
+  "key": "platform_fee_percentage",
+  "value": "2.5"
 }
 ```
 
----
-
-### 6.2 Scan Ticket
-
-**POST** `/scan/scan`
-
-Scan ticket QR code (online or offline mode).
-
-**Request Body:**
-```json
-{
-  "ticketId": "uuid",
-  "eventId": "uuid",
-  "signature": "hmac-signature",
-  "scannerDevice": "Scanner-1"
-}
-```
-
-**Response (200) - Success:**
+**Expected Response (200):**
 ```json
 {
   "success": true,
-  "result": "SUCCESS",
-  "message": "WELCOME - TICKET VALID",
-  "ticket": {
-    "owner": "John Doe",
-    "ticketType": "VIP",
-    "event": "Music Festival 2025"
-  }
-}
-```
-
-**Response (200) - Already Used:**
-```json
-{
-  "success": false,
-  "result": "ALREADY_USED",
-  "message": "Ticket already used at 2025-12-01T18:30:00.000Z",
-  "usedAt": "2025-12-01T18:30:00.000Z"
-}
-```
-
----
-
-### 6.3 Upload Scan Logs
-
-**POST** `/scan/upload-logs`
-
-Upload offline scan logs after event (EO only).
-
-**Headers:**
-```
-Authorization: Bearer <eo_token>
-```
-
-**Request Body:**
-```json
-{
-  "logs": [
-    {
-      "ticketId": "uuid",
-      "eventId": "uuid",
-      "scanResult": "SUCCESS",
-      "scannerDevice": "Scanner-1",
-      "scannedAt": "2025-12-01T18:30:00.000Z"
+  "message": "Configuration updated",
+  "data": {
+    "config": {
+      "id": "config-uuid",
+      "key": "platform_fee_percentage",
+      "value": "2.5",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
     }
-  ]
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "5 scan logs uploaded"
-}
-```
-
----
-
-## Error Responses
-
-All endpoints may return error responses in this format:
-
-**400 Bad Request:**
-```json
-{
-  "success": false,
-  "message": "Validation error",
-  "errors": ["Field X is required"]
-}
-```
-
-**401 Unauthorized:**
-```json
-{
-  "success": false,
-  "message": "Invalid or expired token"
-}
-```
-
-**403 Forbidden:**
-```json
-{
-  "success": false,
-  "message": "Insufficient permissions"
-}
-```
-
-**404 Not Found:**
-```json
-{
-  "success": false,
-  "message": "Resource not found"
-}
-```
-
-**500 Internal Server Error:**
-```json
-{
-  "success": false,
-  "message": "Internal Server Error"
-}
-```
-
----
-
-## Rate Limiting
-
-No rate limiting implemented yet (TODO for production).
-
-## Pagination
-
-List endpoints support pagination via query parameters:
-- `page` (default: 1)
-- `limit` (default: 10)
-
-Response includes pagination metadata:
-```json
-{
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "total": 100,
-    "totalPages": 10
   }
 }
+```
+
+---
+
+## 8. HEALTH CHECK
+
+### 8.1 Check API Health
+**Method:** `GET`  
+**Endpoint:** `/health`  
+**Headers:** None
+
+**Body:** None
+
+**Expected Response (200):**
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}
+```
+
+---
+
+## TEST FLOW SEQUENCE
+
+### Complete Testing Flow:
+
+#### Phase 1: Setup & Authentication
+1. Register User (Buyer) → Save `userToken`
+2. Register EO → Save `eoToken`
+3. Register SuperAdmin → Save `adminToken`
+4. Login as User → Verify token
+5. Connect Wallet (User) → Add wallet address
+
+#### Phase 2: Event Creation & Approval
+6. Create Event (EO) → Save `eventId`, Status should be `PENDING_APPROVAL`
+7. Approve Revenue Split (Receiver 1) → Provide bank details
+8. Approve Revenue Split (Receiver 2) → Provide bank details
+9. Verify Event Status Changed to `ACCEPTED`
+10. Configure Ticket Types (EO) → Save `ticketTypeId`
+
+#### Phase 3: Ticket Purchase & Payment
+11. Get All Events (Public) → Verify event is visible
+12. Purchase Ticket (User) → Save `transactionId` and `paymentToken`
+13. Simulate Payment Webhook → Order status = "settlement"
+14. Get My Tickets (User) → Verify ticket received with `nftTokenId`
+15. Get Ticket Detail → Verify all ticket info
+
+#### Phase 4: NFT Claim
+16. Claim NFT (User) → Get `txHash` and verify on blockchain
+17. Verify NFT ownership changed
+
+#### Phase 5: Ticket Resale
+18. Create Resale Listing (User) → Save `listingId`
+19. Get Resale Listings → Verify listing appears
+20. Register Another User (Buyer 2) → Save `buyer2Token`
+21. Purchase Resale Ticket (Buyer 2) → Save resale `transactionId`
+22. Simulate Resale Payment Webhook
+23. Verify Ticket Ownership Transfer
+24. Verify Old QR is Blacklisted
+25. Get My Tickets (Buyer 2) → Verify new ticket with new QR
+
+#### Phase 6: Event Scanning
+26. Scan Ticket (Valid QR) → Should return SUCCESS
+27. Scan Ticket (Same QR Again) → Should return ALREADY_USED
+28. Scan Ticket (Blacklisted QR) → Should return BLACKLISTED
+29. Scan Ticket (Invalid Signature) → Should return INVALID_SIGNATURE
+30. Get Scan Logs (EO) → Verify all scan attempts logged
+
+#### Phase 7: Event Completion & Withdrawal
+31. Complete Event (EO) → Trigger revenue split on blockchain
+32. Get Revenue Report (Admin) → Verify split calculations
+33. Process Receiver Withdrawal (Admin) → Withdraw to bank for Receiver 1
+34. Process Receiver Withdrawal (Admin) → Withdraw to bank for Receiver 2
+35. Get My Revenue Receivers (Receiver 1) → Verify withdrawal status
+
+#### Phase 8: Admin Operations
+36. Get Platform Stats (Admin) → Verify totals
+37. Process Tax Withdrawal (Admin) → 10% tax withdrawal
+38. Process Platform Fee Withdrawal (Admin) → 2.5% platform fee
+39. Export Event Audit (EO) → Download PDF report
+
+#### Phase 9: User Dashboard
+40. Get My Transactions (User) → Verify purchase history
+41. Get My Revenue Receivers (User if receiver) → Check earnings
+42. Get Dashboard Stats (User) → Verify statistics
+
+---
+
+## ERROR CASES TO TEST
+
+### Authentication Errors
+- **401 Unauthorized:** Access protected endpoint without token
+- **403 Forbidden:** User tries to access EO-only endpoint
+- **400 Bad Request:** Register with existing email
+
+### Event Errors
+- **404 Not Found:** Get non-existent event
+- **400 Bad Request:** Create event with percentage ≠ 100%
+- **400 Bad Request:** Configure tickets before approval
+- **400 Bad Request:** Complete event before end date
+
+### Ticket Purchase Errors
+- **400 Bad Request:** Purchase sold out ticket
+- **400 Bad Request:** Purchase outside sale period
+- **400 Bad Request:** EO purchases own event ticket
+- **404 Not Found:** Purchase non-existent ticket type
+
+### Resale Errors
+- **400 Bad Request:** Resale price > 120% original price
+- **400 Bad Request:** Resale NFT-claimed ticket
+- **400 Bad Request:** Resale < 6 hours before event
+- **400 Bad Request:** Buy own resale listing
+
+### Scanning Errors
+- **Invalid Signature:** Tampered QR code
+- **Already Used:** Scan same ticket twice
+- **Blacklisted:** Scan resold ticket's old QR
+- **Not Found:** Scan non-existent ticket
+
+### Withdrawal Errors
+- **400 Bad Request:** Withdraw before event completion
+- **400 Bad Request:** Withdraw twice
+- **404 Not Found:** Withdraw non-existent receiver
+
+---
+
+## NOTES
+
+### Important Variables to Track:
+```
+userToken: JWT token for buyer
+eoToken: JWT token for event organizer
+adminToken: JWT token for super admin
+eventId: Created event ID
+ticketTypeId: Ticket type ID
+transactionId: Purchase transaction ID
+ticketId: Generated ticket ID
+listingId: Resale listing ID
+receiverEmail: Revenue receiver email
+walletAddress: Connected wallet address
+```
+
+### Payment Simulation:
+For testing, you need to simulate Midtrans webhook. Use the following transaction_status values:
+- `pending`: Payment pending
+- `settlement`: Payment successful
+- `capture`: Card payment captured
+- `cancel`: Payment cancelled
+- `deny`: Payment denied
+- `expire`: Payment expired
+
+### Blockchain Notes:
+- Ensure you have test ETH for gas fees
+- Use Sepolia testnet for testing
+- Verify transactions on Sepolia Etherscan
+- IPFS uploads might be slow, consider mock responses
+
+### Testing Tools:
+1. **Postman** - For API testing
+2. **Postman Collection Runner** - For automated flow testing
+3. **Postman Environment** - To store variables
+4. **Postman Mock Server** - For webhook simulation
+
+### Environment Variables Setup:
+Create a Postman Environment with:
+```
+baseUrl: http://localhost:5000
+userToken: (will be set automatically)
+eoToken: (will be set automatically)
+adminToken: (will be set automatically)
+eventId: (will be set automatically)
+ticketTypeId: (will be set automatically)
+transactionId: (will be set automatically)
+ticketId: (will be set automatically)
+listingId: (will be set automatically)
+```
+
+### Auto-Save Variables (Add to Test Scripts):
+```javascript
+// After Register/Login
+pm.collectionVariables.set('userToken', pm.response.json().data.token);
+
+// After Create Event
+pm.collectionVariables.set('eventId', pm.response.json().data.event.id);
+
+// After Configure Tickets
+pm.collectionVariables.set('ticketTypeId', pm.response.json().data.ticketTypes[0].id);
+
+// After Purchase Ticket
+pm.collectionVariables.set('transactionId', pm.response.json().data.transactionId);
+
+// After Get My Tickets
+pm.collectionVariables.set('ticketId', pm.response.json().data.tickets[0].id);
+
+// After Create Resale Listing
+pm.collectionVariables.set('listingId', pm.response.json().data.listing.id);
 ```

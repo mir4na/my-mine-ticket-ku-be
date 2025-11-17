@@ -34,6 +34,7 @@ export const config = {
     gateway: process.env.IPFS_GATEWAY || 'https://ipfs.io/ipfs/',
     apiUrl: process.env.IPFS_API_URL,
     apiKey: process.env.IPFS_API_KEY,
+    apiSecret: process.env.IPFS_API_SECRET
   },
 
   payment: {
@@ -53,16 +54,11 @@ export const config = {
   },
 
   platform: {
-    taxPercentage: 10,
     platformFeePercentage: 2.5,
+    resaleFeePercentage: 7.5,
     maxResalePrice: 120,
-    taxEmail: process.env.TAX_RECEIVER_EMAIL || 'pajak@kemenkeu.go.id',
     platformEmail: process.env.PLATFORM_RECEIVER_EMAIL || 'finance@mymineticketku.com',
-    taxTransferMethod: process.env.TAX_TRANSFER_METHOD || 'direct',
     platformTransferMethod: process.env.PLATFORM_TRANSFER_METHOD || 'direct',
-    taxBankAccount: process.env.TAX_BANK_ACCOUNT,
-    taxBankName: process.env.TAX_BANK_NAME,
-    taxAccountHolder: process.env.TAX_ACCOUNT_HOLDER,
     platformBankAccount: process.env.PLATFORM_BANK_ACCOUNT,
     platformBankName: process.env.PLATFORM_BANK_NAME,
     platformAccountHolder: process.env.PLATFORM_ACCOUNT_HOLDER,

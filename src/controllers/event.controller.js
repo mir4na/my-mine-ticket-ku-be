@@ -4,6 +4,7 @@ import { asyncHandler, paginate } from '../utils/helpers.js';
 import { emailService } from '../services/email.service.js';
 import blockchainService from '../services/blockchain.service.js';
 import { custodialService } from '../services/custodial.service.js';
+import { csvService } from '../services/csv.service.js';
 
 const prisma = new PrismaClient();
 
@@ -61,7 +62,7 @@ export const eventController = {
 
     res.status(201).json({
       success: true,
-      message: 'Event created successfully. Tax (10%) and Platform Fee (2.5%) will be automatically deducted.',
+      message: 'Event created successfully. Platform Fee (2.5%) will be automatically deducted.',
       data: { event },
     });
   }),
@@ -244,4 +245,84 @@ export const eventController = {
       data: { txHash },
     });
   }),
+
+  exportEventAudit: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const event = await prisma.event.findUnique({
+      where: { id, creatorId: req.user.id },
+      include: {
+        ticketTypes: {
+          include: {
+            _count: { select: { tickets: true } }
+          }
+        },
+        revenueReceivers: {
+          include: {
+            withdrawals: true
+          }
+        },
+        transactions: {
+          where: { paymentStatus: 'PAID' },
+          include: {
+            buyer: { select: { username: true, email: true } },
+            ticketType: { select: { name: true, price: true } }
+          }
+        }
+      }
+    });
+
+    if (!event) throw new ApiError(404, 'Event not found');
+
+    const totalRevenue = event.transactions.reduce((sum, tx) => sum + tx.amount, 0);
+    const platformFee = (totalRevenue * 2.5) / 100;
+    const netRevenue = totalRevenue - platformFee;
+
+    const auditData = {
+      event: {
+        name: event.name,
+        location: event.location,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        status: event.status
+      },
+      ticketSales: {
+        totalTicketsSold: event.transactions.length,
+        totalRevenue: totalRevenue,
+        platformFee: platformFee,
+        netRevenue: netRevenue,
+        ticketTypes: event.ticketTypes.map(tt => ({
+          name: tt.name,
+          price: tt.price,
+          stock: tt.stock,
+          sold: tt.sold,
+          revenue: tt.sold * tt.price
+        }))
+      },
+      revenueSplit: event.revenueReceivers.map(receiver => ({
+        email: receiver.email,
+        percentage: receiver.percentage,
+        expectedAmount: (netRevenue * receiver.percentage) / 100,
+        withdrawals: receiver.withdrawals.map(w => ({
+          amount: w.amount,
+          status: w.status,
+          createdAt: w.createdAt
+        }))
+      })),
+      transactions: event.transactions.map(tx => ({
+        id: tx.id,
+        buyer: tx.buyer.username,
+        ticketType: tx.ticketType.name,
+        amount: tx.amount,
+        date: tx.createdAt
+      }))
+    };
+
+    const csvContent = csvService.generateAuditCSV(auditData);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=audit-${event.name.replace(/\s+/g, '-')}-${Date.now()}.csv`);
+    res.send(csvContent);
+  })
+
 };
