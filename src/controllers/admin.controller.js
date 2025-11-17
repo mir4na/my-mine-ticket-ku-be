@@ -1,9 +1,9 @@
-// src/controllers/admin.controller.js
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../utils/apiError.js';
 import { asyncHandler } from '../utils/helpers.js';
 import blockchainService from '../services/blockchain.service.js';
 import { treasuryService } from '../services/treasury.service.js';
+import { custodialService } from '../services/custodial.service.js';
 import { config } from '../config/index.js';
 
 const prisma = new PrismaClient();
@@ -70,6 +70,7 @@ export const adminController = {
       totalRevenue,
       receivers: event.revenueReceivers.map(receiver => ({
         email: receiver.email,
+        walletAddress: receiver.walletAddress,
         percentage: receiver.percentage,
         expectedAmount: (totalRevenue * receiver.percentage) / 100,
         withdrawals: receiver.withdrawals,
@@ -79,7 +80,7 @@ export const adminController = {
     res.json({ success: true, data: { report } });
   }),
 
-  processWithdrawal: asyncHandler(async (req, res) => {
+  processReceiverWithdrawal: asyncHandler(async (req, res) => {
     const { receiverId } = req.body;
 
     const receiver = await prisma.revenueReceiver.findUnique({
@@ -102,7 +103,7 @@ export const adminController = {
 
     const balance = await blockchainService.getReceiverBalance(
       receiver.eventId,
-      receiver.walletAddress || receiver.email
+      receiver.walletAddress
     );
 
     if (balance.withdrawn) throw new ApiError(400, 'Balance already withdrawn');
@@ -117,10 +118,12 @@ export const adminController = {
     });
 
     try {
+      const custodialWallet = custodialService.getCustodialWallet(receiver.email);
+
       const { withdrawTxHash, burnTxHash } = await treasuryService.processWithdrawal(
         receiver.eventId,
-        receiver.walletAddress || receiver.email,
-        config.treasury.walletAddress,
+        custodialWallet.privateKey,
+        custodialWallet.address,
         parseFloat(balance.balance),
         {
           bankAccount: receiver.bankAccount,
@@ -154,5 +157,53 @@ export const adminController = {
 
       throw error;
     }
+  }),
+
+  processTaxWithdrawal: asyncHandler(async (req, res) => {
+    const totalTaxHeld = await prisma.transaction.aggregate({
+      where: { paymentStatus: 'PAID' },
+      _sum: { amount: true },
+    });
+
+    const taxAmount = (totalTaxHeld._sum.amount || 0) * 0.1;
+
+    const transferResult = await treasuryService.transferIDRToBank(taxAmount, {
+      bankAccount: config.platform.taxBankAccount,
+      bankName: config.platform.taxBankName,
+      accountHolder: config.platform.taxAccountHolder,
+    });
+
+    res.json({
+      success: true,
+      message: 'Tax withdrawal processed',
+      data: {
+        amount: taxAmount,
+        transfer: transferResult,
+      },
+    });
+  }),
+
+  processPlatformWithdrawal: asyncHandler(async (req, res) => {
+    const totalRevenueHeld = await prisma.transaction.aggregate({
+      where: { paymentStatus: 'PAID' },
+      _sum: { amount: true },
+    });
+
+    const platformAmount = (totalRevenueHeld._sum.amount || 0) * 0.025;
+
+    const transferResult = await treasuryService.transferIDRToBank(platformAmount, {
+      bankAccount: config.platform.platformBankAccount,
+      bankName: config.platform.platformBankName,
+      accountHolder: config.platform.platformAccountHolder,
+    });
+
+    res.json({
+      success: true,
+      message: 'Platform fee withdrawal processed',
+      data: {
+        amount: platformAmount,
+        transfer: transferResult,
+      },
+    });
   }),
 };

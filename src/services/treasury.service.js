@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import { config } from '../config/index.js';
 import blockchainService from './blockchain.service.js';
 
@@ -22,7 +23,6 @@ class TreasuryService {
     async transferToTaxAndPlatform(taxAmount, platformFee) {
         const results = { tax: null, platform: null };
 
-        // TAX
         if (config.platform.taxTransferMethod === 'direct') {
             results.tax = await this.transferIDRToBank(taxAmount, {
                 bankName: config.platform.taxBankName,
@@ -37,7 +37,6 @@ class TreasuryService {
             };
         }
 
-        // PLATFORM FEE
         if (config.platform.platformTransferMethod === 'direct') {
             results.platform = await this.transferIDRToBank(platformFee, {
                 bankName: config.platform.platformBankName,
@@ -125,18 +124,24 @@ class TreasuryService {
         }
     }
 
-    async processWithdrawal(eventId, receiverAddress, custodialWallet, amount, bankAccount) {
+    async processWithdrawal(eventId, receiverPrivateKey, custodialWallet, amount, bankAccount) {
         try {
-            const withdrawTxHash = await blockchainService.withdraw(
-                eventId,
-                receiverAddress,
-                custodialWallet
+            const provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
+            const receiverWallet = new ethers.Wallet(receiverPrivateKey, provider);
+            
+            const escrowContract = new ethers.Contract(
+                config.blockchain.escrowContract,
+                blockchainService.escrowContract.interface,
+                receiverWallet
             );
+
+            const withdrawTx = await escrowContract.withdraw(eventId, custodialWallet);
+            const withdrawReceipt = await withdrawTx.wait();
 
             const { burnTxHash, idrTransfer } = await this.burnWIDRAndTransferIDR(amount, bankAccount);
 
             return {
-                withdrawTxHash,
+                withdrawTxHash: withdrawReceipt.hash,
                 burnTxHash,
                 idrTransfer,
             };

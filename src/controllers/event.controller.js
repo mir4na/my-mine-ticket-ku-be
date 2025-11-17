@@ -3,6 +3,7 @@ import { ApiError } from '../utils/apiError.js';
 import { asyncHandler, paginate } from '../utils/helpers.js';
 import { emailService } from '../services/email.service.js';
 import blockchainService from '../services/blockchain.service.js';
+import { custodialService } from '../services/custodial.service.js';
 
 const prisma = new PrismaClient();
 
@@ -69,10 +70,13 @@ export const eventController = {
     if (!receiver) throw new ApiError(404, 'Revenue receiver not found');
     if (receiver.approvalStatus !== 'PENDING') throw new ApiError(400, 'Revenue split already processed');
 
+    const custodialWallet = custodialService.getCustodialWallet(email);
+
     await prisma.revenueReceiver.update({
       where: { id: receiver.id },
       data: {
         approvalStatus: approved ? 'APPROVED' : 'REJECTED',
+        walletAddress: approved ? custodialWallet.address : null,
         ...(approved && { bankAccount, bankName, accountHolder }),
         ...(!approved && { rejectionReason }),
       },
@@ -88,7 +92,7 @@ export const eventController = {
         data: { status: 'ACCEPTED' },
       });
 
-      const receiverAddresses = allReceivers.map(r => r.walletAddress || r.email);
+      const receiverAddresses = allReceivers.map(r => r.walletAddress);
       const percentages = allReceivers.map(r => r.percentage);
 
       await blockchainService.createEvent(eventId, receiverAddresses, percentages);
@@ -185,7 +189,7 @@ export const eventController = {
         creator: { select: { username: true, displayName: true } },
         ticketTypes: true,
         revenueReceivers: {
-          select: { email: true, percentage: true, approvalStatus: true },
+          select: { email: true, percentage: true, approvalStatus: true, walletAddress: true },
         },
       },
     });
