@@ -1,31 +1,29 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { config } from '../config/index.js';
 
 class EmailService {
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: config.email.host,
-      port: config.email.port,
-      secure: config.email.port === 465,
-      auth: {
-        user: config.email.user,
-        pass: config.email.password,
-      },
-    });
+    this.resend = new Resend(config.email.resendApiKey);
   }
 
   async sendEmail(to, subject, html, attachments = []) {
     try {
-      const mailOptions = {
+      const emailData = {
         from: config.email.from,
         to,
         subject,
         html,
-        attachments,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      return info.messageId;
+      if (attachments.length > 0) {
+        emailData.attachments = attachments.map(att => ({
+          filename: att.filename,
+          content: att.content,
+        }));
+      }
+
+      const response = await this.resend.emails.send(emailData);
+      return response.id;
     } catch (error) {
       throw new Error(`Email sending failed: ${error.message}`);
     }
@@ -71,7 +69,6 @@ class EmailService {
       {
         filename: `ticket-${ticketData.ticketId}.pdf`,
         content: pdfBuffer,
-        contentType: 'application/pdf',
       },
     ];
 
