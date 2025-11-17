@@ -2,70 +2,148 @@ import { config } from '../config/index.js';
 import blockchainService from './blockchain.service.js';
 
 class TreasuryService {
-  constructor() {
-    this.walletAddress = config.treasury.walletAddress;
-  }
-
-  async mintWIDR(amount) {
-    try {
-      const txHash = await blockchainService.mintWIDR(this.walletAddress, amount);
-      return txHash;
-    } catch (error) {
-      throw new Error(`wIDR minting failed: ${error.message}`);
+    constructor() {
+        this.walletAddress = config.treasury.walletAddress;
     }
-  }
 
-  async sendWIDRToEscrow(eventId, buyerAddress, amount, metadataURI) {
-    try {
-      const result = await blockchainService.purchaseTicket(
-        eventId,
-        buyerAddress,
-        amount,
-        metadataURI
-      );
-      return result;
-    } catch (error) {
-      throw new Error(`Escrow transfer failed: ${error.message}`);
+    calculateSplit(grossAmount) {
+        const taxAmount = Math.floor((grossAmount * config.platform.taxPercentage) / 100);
+        const platformFee = Math.floor((grossAmount * config.platform.platformFeePercentage) / 100);
+        const netAmount = grossAmount - taxAmount - platformFee;
+
+        return {
+            grossAmount,
+            taxAmount,
+            platformFee,
+            netAmount,
+        };
     }
-  }
 
-  async burnWIDRAndTransferIDR(amount, bankAccount) {
-    try {
-      const burnTxHash = await blockchainService.burnWIDR(amount);
-      await this.transferIDRToBank(amount, bankAccount);
-      return burnTxHash;
-    } catch (error) {
-      throw new Error(`wIDR burn and IDR transfer failed: ${error.message}`);
+    async transferToTaxAndPlatform(taxAmount, platformFee) {
+        const results = { tax: null, platform: null };
+
+        // TAX
+        if (config.platform.taxTransferMethod === 'direct') {
+            results.tax = await this.transferIDRToBank(taxAmount, {
+                bankName: config.platform.taxBankName,
+                accountNumber: config.platform.taxBankAccount,
+                accountHolder: config.platform.taxAccountHolder,
+            });
+        } else {
+            results.tax = {
+                method: 'hold',
+                amount: taxAmount,
+                note: 'Held in treasury for later withdrawal',
+            };
+        }
+
+        // PLATFORM FEE
+        if (config.platform.platformTransferMethod === 'direct') {
+            results.platform = await this.transferIDRToBank(platformFee, {
+                bankName: config.platform.platformBankName,
+                accountNumber: config.platform.platformBankAccount,
+                accountHolder: config.platform.platformAccountHolder,
+            });
+        } else {
+            results.platform = {
+                method: 'hold',
+                amount: platformFee,
+                note: 'Held in treasury for later withdrawal',
+            };
+        }
+
+        return results;
     }
-  }
 
-  async transferIDRToBank(amount, bankAccount) {
-    return {
-      success: true,
-      transferId: `TRF-${Date.now()}`,
-      amount,
-      bankAccount,
-    };
-  }
-
-  async processWithdrawal(eventId, receiverAddress, custodialWallet, amount, bankAccount) {
-    try {
-      const withdrawTxHash = await blockchainService.withdraw(
-        eventId,
-        receiverAddress,
-        custodialWallet
-      );
-
-      const burnTxHash = await this.burnWIDRAndTransferIDR(amount, bankAccount);
-
-      return {
-        withdrawTxHash,
-        burnTxHash,
-      };
-    } catch (error) {
-      throw new Error(`Withdrawal processing failed: ${error.message}`);
+    async transferIDRToBank(amount, bankAccount) {
+        return {
+            success: true,
+            method: 'bank_transfer',
+            transferId: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            amount,
+            bankAccount,
+            timestamp: new Date().toISOString(),
+        };
     }
-  }
+
+    async mintWIDRForTicket(netAmount) {
+        try {
+            return await blockchainService.mintWIDR(this.walletAddress, netAmount);
+        } catch (error) {
+            throw new Error(`wIDR minting failed: ${error.message}`);
+        }
+    }
+
+    async sendWIDRToEscrow(eventId, buyerAddress, netAmount, metadataURI) {
+        try {
+            return await blockchainService.purchaseTicket(
+                eventId,
+                buyerAddress,
+                netAmount,
+                metadataURI
+            );
+        } catch (error) {
+            throw new Error(`Escrow transfer failed: ${error.message}`);
+        }
+    }
+
+    async processTicketPurchase(eventId, buyerAddress, grossAmount, metadataURI) {
+        const { taxAmount, platformFee, netAmount } = this.calculateSplit(grossAmount);
+
+        const taxPlatformTransfer = await this.transferToTaxAndPlatform(taxAmount, platformFee);
+
+        const mintTxHash = await this.mintWIDRForTicket(netAmount);
+
+        const { txHash, nftTokenId } = await this.sendWIDRToEscrow(
+            eventId,
+            buyerAddress,
+            netAmount,
+            metadataURI
+        );
+
+        return {
+            grossAmount,
+            taxAmount,
+            platformFee,
+            netAmount,
+            taxTransfer: taxPlatformTransfer.tax,
+            platformTransfer: taxPlatformTransfer.platform,
+            mintTxHash,
+            escrowTxHash: txHash,
+            nftTokenId,
+        };
+    }
+
+    async burnWIDRAndTransferIDR(amount, bankAccount) {
+        try {
+            const burnTxHash = await blockchainService.burnWIDR(amount);
+            const idrTransfer = await this.transferIDRToBank(amount, bankAccount);
+
+            return { burnTxHash, idrTransfer };
+        } catch (error) {
+            throw new Error(`wIDR burn and IDR transfer failed: ${error.message}`);
+        }
+    }
+
+    async processWithdrawal(eventId, receiverAddress, custodialWallet, amount, bankAccount) {
+        try {
+            const withdrawTxHash = await blockchainService.withdraw(
+                eventId,
+                receiverAddress,
+                custodialWallet
+            );
+
+            const { burnTxHash, idrTransfer } = await this.burnWIDRAndTransferIDR(amount, bankAccount);
+
+            return {
+                withdrawTxHash,
+                burnTxHash,
+                idrTransfer,
+            };
+        } catch (error) {
+            throw new Error(`Withdrawal processing failed: ${error.message}`);
+        }
+    }
 }
 
 export const treasuryService = new TreasuryService();

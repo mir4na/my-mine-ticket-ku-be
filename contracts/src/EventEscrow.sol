@@ -28,28 +28,16 @@ contract EventEscrow is ReentrancyGuard, Ownable {
     mapping(string => mapping(address => ReceiverBalance)) public receiverBalances;
     mapping(string => uint256) public eventEscrowBalance;
 
-    uint256 public constant TAX_PERCENTAGE = 10;
-    uint256 public constant PLATFORM_FEE = 250;
     uint256 public constant PERCENTAGE_DENOMINATOR = 10000;
-
-    address public taxRecipient;
-    address public platformRecipient;
 
     event TicketPurchased(string indexed eventId, address indexed buyer, uint256 amount, uint256 nftTokenId);
     event RevenueDistributed(string indexed eventId, address indexed receiver, uint256 amount);
     event Withdrawn(string indexed eventId, address indexed receiver, uint256 amount);
     event EventCompleted(string indexed eventId);
 
-    constructor(
-        address _wIDRToken,
-        address _ticketNFT,
-        address _taxRecipient,
-        address _platformRecipient
-    ) Ownable(msg.sender) {
+    constructor(address _wIDRToken, address _ticketNFT) Ownable(msg.sender) {
         wIDRToken = WIDR(_wIDRToken);
         ticketNFT = TicketNFT(_ticketNFT);
-        taxRecipient = _taxRecipient;
-        platformRecipient = _platformRecipient;
     }
 
     function createEvent(
@@ -58,88 +46,70 @@ contract EventEscrow is ReentrancyGuard, Ownable {
         uint256[] memory percentages
     ) external onlyOwner {
         require(receivers.length == percentages.length, "Length mismatch");
-        require(events[eventId].receivers.length == 0, "Event already exists");
+        require(events[eventId].receivers.length == 0, "Event exists");
 
-        uint256 totalPercentage = 0;
+        uint256 total = 0;
         for (uint256 i = 0; i < percentages.length; i++) {
-            totalPercentage += percentages[i];
+            total += percentages[i];
         }
-        require(totalPercentage == PERCENTAGE_DENOMINATOR, "Invalid percentage distribution");
+        require(total == PERCENTAGE_DENOMINATOR, "Bad percentage");
 
-        events[eventId] = EventData({
-            eventId: eventId,
-            receivers: receivers,
-            percentages: percentages,
-            isCompleted: false,
-            totalEscrow: 0
-        });
+        events[eventId] = EventData(eventId, receivers, percentages, false, 0);
     }
 
     function purchaseTicket(
         string memory eventId,
         address buyer,
         uint256 amount,
-        string memory nftMetadataURI
+        string memory metadataURI
     ) external onlyOwner nonReentrant returns (uint256) {
-        require(events[eventId].receivers.length > 0, "Event does not exist");
+        require(events[eventId].receivers.length > 0, "Event missing");
         require(!events[eventId].isCompleted, "Event already completed");
 
-        require(
-            wIDRToken.transferFrom(msg.sender, address(this), amount),
-            "wIDR transfer failed"
-        );
+        require(wIDRToken.transferFrom(msg.sender, address(this), amount), "Transfer fail");
 
-        uint256 taxAmount = (amount * TAX_PERCENTAGE) / 100;
-        uint256 platformFeeAmount = (amount * PLATFORM_FEE) / PERCENTAGE_DENOMINATOR;
-        uint256 netAmount = amount - taxAmount - platformFeeAmount;
+        eventEscrowBalance[eventId] += amount;
+        events[eventId].totalEscrow += amount;
 
-        require(wIDRToken.transfer(taxRecipient, taxAmount), "Tax transfer failed");
-        require(wIDRToken.transfer(platformRecipient, platformFeeAmount), "Platform fee transfer failed");
-
-        eventEscrowBalance[eventId] += netAmount;
-        events[eventId].totalEscrow += netAmount;
-
-        uint256 nftTokenId = ticketNFT.mintToVault(nftMetadataURI);
-
-        emit TicketPurchased(eventId, buyer, amount, nftTokenId);
-        return nftTokenId;
+        uint256 tokenId = ticketNFT.mintToVault(metadataURI);
+        emit TicketPurchased(eventId, buyer, amount, tokenId);
+        return tokenId;
     }
 
     function completeEvent(string memory eventId) external onlyOwner {
-        require(events[eventId].receivers.length > 0, "Event does not exist");
-        require(!events[eventId].isCompleted, "Event already completed");
-
         EventData storage eventData = events[eventId];
-        uint256 totalAmount = eventEscrowBalance[eventId];
+
+        require(eventData.receivers.length > 0, "Event missing");
+        require(!eventData.isCompleted, "Done");
+
+        uint256 total = eventEscrowBalance[eventId];
 
         for (uint256 i = 0; i < eventData.receivers.length; i++) {
-            address receiver = eventData.receivers[i];
-            uint256 percentage = eventData.percentages[i];
-            uint256 receiverAmount = (totalAmount * percentage) / PERCENTAGE_DENOMINATOR;
+            address recv = eventData.receivers[i];
+            uint256 pct = eventData.percentages[i];
 
-            receiverBalances[eventId][receiver].balance = receiverAmount;
+            uint256 share = (total * pct) / PERCENTAGE_DENOMINATOR;
+            receiverBalances[eventId][recv].balance = share;
 
-            emit RevenueDistributed(eventId, receiver, receiverAmount);
+            emit RevenueDistributed(eventId, recv, share);
         }
 
         eventData.isCompleted = true;
         emit EventCompleted(eventId);
     }
 
-    function withdraw(string memory eventId, address custodialWallet) external nonReentrant {
-        require(events[eventId].isCompleted, "Event not completed");
+    function withdraw(string memory eventId, address wallet) external nonReentrant {
+        ReceiverBalance storage bal = receiverBalances[eventId][msg.sender];
 
-        ReceiverBalance storage rb = receiverBalances[eventId][msg.sender];
-        require(rb.balance > 0, "No balance to withdraw");
-        require(!rb.withdrawn, "Already withdrawn");
+        require(events[eventId].isCompleted, "Not done");
+        require(bal.balance > 0, "Zero bal");
+        require(!bal.withdrawn, "Already took");
 
-        uint256 amount = rb.balance;
-
-        rb.withdrawn = true;
+        uint256 amount = bal.balance;
+        bal.withdrawn = true;
         eventEscrowBalance[eventId] -= amount;
 
-        require(wIDRToken.transfer(custodialWallet, amount), "Withdrawal failed");
-
+        require(wIDRToken.transfer(wallet, amount), "Transfer fail");
         emit Withdrawn(eventId, msg.sender, amount);
     }
 
@@ -147,22 +117,13 @@ contract EventEscrow is ReentrancyGuard, Ownable {
         ticketNFT.claimNFT(tokenId, claimer);
     }
 
-    function updateTaxRecipient(address newRecipient) external onlyOwner {
-        require(newRecipient != address(0), "Invalid address");
-        taxRecipient = newRecipient;
-    }
-
-    function updatePlatformRecipient(address newRecipient) external onlyOwner {
-        require(newRecipient != address(0), "Invalid address");
-        platformRecipient = newRecipient;
-    }
-
     function getEventReceivers(string memory eventId) external view returns (address[] memory, uint256[] memory) {
-        return (events[eventId].receivers, events[eventId].percentages);
+        EventData storage eventData = events[eventId];
+        return (eventData.receivers, eventData.percentages);
     }
 
     function getReceiverBalance(string memory eventId, address receiver) external view returns (uint256, bool) {
-        ReceiverBalance memory rb = receiverBalances[eventId][receiver];
-        return (rb.balance, rb.withdrawn);
+        ReceiverBalance storage bal = receiverBalances[eventId][receiver];
+        return (bal.balance, bal.withdrawn);
     }
 }

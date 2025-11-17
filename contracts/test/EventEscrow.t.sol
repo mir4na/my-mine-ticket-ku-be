@@ -12,16 +12,12 @@ contract EventEscrowTest is Test {
     EventEscrow public escrow;
     
     address public owner;
-    address public taxRecipient;
-    address public platformRecipient;
     address public buyer;
     address public receiver1;
     address public receiver2;
     
     function setUp() public {
         owner = address(this);
-        taxRecipient = address(0x1);
-        platformRecipient = address(0x2);
         buyer = address(0x3);
         receiver1 = address(0x4);
         receiver2 = address(0x5);
@@ -30,9 +26,7 @@ contract EventEscrowTest is Test {
         ticketNFT = new TicketNFT();
         escrow = new EventEscrow(
             address(wIDR),
-            address(ticketNFT),
-            taxRecipient,
-            platformRecipient
+            address(ticketNFT)
         );
         
         ticketNFT.transferOwnership(address(escrow));
@@ -57,7 +51,7 @@ contract EventEscrowTest is Test {
         assertEq(returnedPercentages[0], 6000);
     }
     
-    function testPurchaseTicket() public {
+    function testPurchaseTicketWithNetAmount() public {
         address[] memory receivers = new address[](2);
         receivers[0] = receiver1;
         receivers[1] = receiver2;
@@ -68,24 +62,23 @@ contract EventEscrowTest is Test {
         
         escrow.createEvent("event-1", receivers, percentages);
         
-        uint256 ticketPrice = 100 ether;
-        wIDR.mint(owner, ticketPrice);
-        wIDR.approve(address(escrow), ticketPrice);
+        uint256 grossAmount = 100 ether;
+        uint256 taxAmount = (grossAmount * 10) / 100;
+        uint256 platformFee = (grossAmount * 250) / 10000;
+        uint256 netAmount = grossAmount - taxAmount - platformFee;
+        
+        wIDR.mint(owner, netAmount);
+        wIDR.approve(address(escrow), netAmount);
         
         uint256 nftTokenId = escrow.purchaseTicket(
             "event-1",
             buyer,
-            ticketPrice,
+            netAmount,
             "ipfs://metadata"
         );
         
-        assertGt(nftTokenId, 0);
-        
-        uint256 taxAmount = (ticketPrice * 10) / 100;
-        uint256 platformFee = (ticketPrice * 250) / 10000;
-        
-        assertEq(wIDR.balanceOf(taxRecipient), taxAmount);
-        assertEq(wIDR.balanceOf(platformRecipient), platformFee);
+        assertEq(nftTokenId, 0);
+        assertEq(wIDR.balanceOf(address(escrow)), netAmount);
     }
     
     function testCompleteEventAndWithdraw() public {
@@ -99,11 +92,13 @@ contract EventEscrowTest is Test {
         
         escrow.createEvent("event-1", receivers, percentages);
         
-        uint256 ticketPrice = 100 ether;
-        wIDR.mint(owner, ticketPrice);
-        wIDR.approve(address(escrow), ticketPrice);
+        uint256 grossAmount = 100 ether;
+        uint256 netAmount = 87.5 ether;
         
-        escrow.purchaseTicket("event-1", buyer, ticketPrice, "ipfs://metadata");
+        wIDR.mint(owner, netAmount);
+        wIDR.approve(address(escrow), netAmount);
+        
+        escrow.purchaseTicket("event-1", buyer, netAmount, "ipfs://metadata");
         
         escrow.completeEvent("event-1");
         
@@ -131,12 +126,12 @@ contract EventEscrowTest is Test {
         escrow.createEvent("event-1", receivers, percentages);
         escrow.completeEvent("event-1");
         
-        uint256 ticketPrice = 100 ether;
-        wIDR.mint(owner, ticketPrice);
-        wIDR.approve(address(escrow), ticketPrice);
+        uint256 netAmount = 87.5 ether;
+        wIDR.mint(owner, netAmount);
+        wIDR.approve(address(escrow), netAmount);
         
         vm.expectRevert("Event already completed");
-        escrow.purchaseTicket("event-1", buyer, ticketPrice, "ipfs://metadata");
+        escrow.purchaseTicket("event-1", buyer, netAmount, "ipfs://metadata");
     }
     
     function testClaimNFT() public {
@@ -148,14 +143,14 @@ contract EventEscrowTest is Test {
         
         escrow.createEvent("event-1", receivers, percentages);
         
-        uint256 ticketPrice = 100 ether;
-        wIDR.mint(owner, ticketPrice);
-        wIDR.approve(address(escrow), ticketPrice);
+        uint256 netAmount = 87.5 ether;
+        wIDR.mint(owner, netAmount);
+        wIDR.approve(address(escrow), netAmount);
         
         uint256 nftTokenId = escrow.purchaseTicket(
             "event-1",
             buyer,
-            ticketPrice,
+            netAmount,
             "ipfs://metadata"
         );
         
@@ -166,5 +161,34 @@ contract EventEscrowTest is Test {
         
         assertEq(ticketNFT.ownerOf(nftTokenId), buyer);
         assertTrue(ticketNFT.claimed(nftTokenId));
+    }
+    
+    function testRevenueSplitCalculation() public {
+        address[] memory receivers = new address[](3);
+        receivers[0] = receiver1;
+        receivers[1] = receiver2;
+        receivers[2] = address(0x6);
+        
+        uint256[] memory percentages = new uint256[](3);
+        percentages[0] = 6000;
+        percentages[1] = 3000;
+        percentages[2] = 1000;
+        
+        escrow.createEvent("event-1", receivers, percentages);
+        
+        uint256 netAmount = 87.5 ether;
+        wIDR.mint(owner, netAmount);
+        wIDR.approve(address(escrow), netAmount);
+        
+        escrow.purchaseTicket("event-1", buyer, netAmount, "ipfs://metadata");
+        escrow.completeEvent("event-1");
+        
+        (uint256 balance1, ) = escrow.getReceiverBalance("event-1", receiver1);
+        (uint256 balance2, ) = escrow.getReceiverBalance("event-1", receiver2);
+        (uint256 balance3, ) = escrow.getReceiverBalance("event-1", address(0x6));
+        
+        assertEq(balance1, (netAmount * 6000) / 10000);
+        assertEq(balance2, (netAmount * 3000) / 10000);
+        assertEq(balance3, (netAmount * 1000) / 10000);
     }
 }

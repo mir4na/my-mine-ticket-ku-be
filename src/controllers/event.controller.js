@@ -1,4 +1,3 @@
-// src/controllers/event.controller.js
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../utils/apiError.js';
 import { asyncHandler, paginate } from '../utils/helpers.js';
@@ -24,7 +23,7 @@ export const eventController = {
     });
 
     if (receivers?.length > 0) {
-      const totalPercentage = receivers.reduce((s, r) => s + r.percentage, 0);
+      const totalPercentage = receivers.reduce((sum, r) => sum + r.percentage, 0);
       if (Math.abs(totalPercentage - 100) > 0.01) {
         throw new ApiError(400, 'Total percentage must equal 100%');
       }
@@ -37,12 +36,12 @@ export const eventController = {
         })),
       });
 
-      for (const receiver of receivers) {
-        const url = `${process.env.FRONTEND_URL}/approve-revenue/${event.id}/${receiver.email}`;
+      for (const r of receivers) {
+        const approvalLink = `${process.env.FRONTEND_URL}/approve-revenue/${event.id}/${r.email}`;
         await emailService.sendRevenueApprovalEmail(
-          receiver.email,
-          { eventName: name, percentage: receiver.percentage },
-          url
+          r.email,
+          { eventName: name, percentage: r.percentage },
+          approvalLink
         );
       }
 
@@ -54,7 +53,7 @@ export const eventController = {
 
     res.status(201).json({
       success: true,
-      message: 'Event created successfully',
+      message: 'Event created successfully. Tax (10%) and Platform Fee (2.5%) will be automatically deducted.',
       data: { event },
     });
   }),
@@ -68,9 +67,7 @@ export const eventController = {
     });
 
     if (!receiver) throw new ApiError(404, 'Revenue receiver not found');
-    if (receiver.approvalStatus !== 'PENDING') {
-      throw new ApiError(400, 'Revenue split already processed');
-    }
+    if (receiver.approvalStatus !== 'PENDING') throw new ApiError(400, 'Revenue split already processed');
 
     await prisma.revenueReceiver.update({
       where: { id: receiver.id },
@@ -81,9 +78,9 @@ export const eventController = {
       },
     });
 
-    const all = await prisma.revenueReceiver.findMany({ where: { eventId } });
-    const allApproved = all.every(r => r.approvalStatus === 'APPROVED');
-    const anyRejected = all.some(r => r.approvalStatus === 'REJECTED');
+    const allReceivers = await prisma.revenueReceiver.findMany({ where: { eventId } });
+    const allApproved = allReceivers.every(r => r.approvalStatus === 'APPROVED');
+    const anyRejected = allReceivers.some(r => r.approvalStatus === 'REJECTED');
 
     if (allApproved) {
       const event = await prisma.event.update({
@@ -91,10 +88,10 @@ export const eventController = {
         data: { status: 'ACCEPTED' },
       });
 
-      const addresses = all.map(r => r.walletAddress || r.email);
-      const percentages = all.map(r => r.percentage);
+      const receiverAddresses = allReceivers.map(r => r.walletAddress || r.email);
+      const percentages = allReceivers.map(r => r.percentage);
 
-      await blockchainService.createEvent(eventId, addresses, percentages);
+      await blockchainService.createEvent(eventId, receiverAddresses, percentages);
     } else if (anyRejected) {
       await prisma.event.update({
         where: { id: eventId },
@@ -117,11 +114,9 @@ export const eventController = {
     });
 
     if (!event) throw new ApiError(404, 'Event not found');
-    if (event.status !== 'ACCEPTED') {
-      throw new ApiError(400, 'Event must be accepted before configuring tickets');
-    }
+    if (event.status !== 'ACCEPTED') throw new ApiError(400, 'Event must be accepted before configuring tickets');
 
-    const created = await prisma.$transaction(
+    const createdTicketTypes = await prisma.$transaction(
       ticketTypes.map(t =>
         prisma.ticketType.create({
           data: {
@@ -139,13 +134,13 @@ export const eventController = {
     res.status(201).json({
       success: true,
       message: 'Tickets configured successfully',
-      data: { ticketTypes: created },
+      data: { ticketTypes: createdTicketTypes },
     });
   }),
 
   getEvents: asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, status, location } = req.query;
-    const { skip, take } = paginate(+page, +limit);
+    const { skip, take } = paginate(parseInt(page), parseInt(limit));
 
     const where = {
       status: status || 'ACCEPTED',
@@ -172,10 +167,10 @@ export const eventController = {
       data: {
         events,
         pagination: {
-          page: +page,
-          limit: +limit,
+          page: parseInt(page),
+          limit: parseInt(limit),
           total,
-          totalPages: Math.ceil(total / +limit),
+          totalPages: Math.ceil(total / parseInt(limit)),
         },
       },
     });
@@ -190,21 +185,14 @@ export const eventController = {
         creator: { select: { username: true, displayName: true } },
         ticketTypes: true,
         revenueReceivers: {
-          select: {
-            email: true,
-            percentage: true,
-            approvalStatus: true,
-          },
+          select: { email: true, percentage: true, approvalStatus: true },
         },
       },
     });
 
     if (!event) throw new ApiError(404, 'Event not found');
 
-    res.json({
-      success: true,
-      data: { event },
-    });
+    res.json({ success: true, data: { event } });
   }),
 
   getMyEvents: asyncHandler(async (req, res) => {
@@ -218,10 +206,7 @@ export const eventController = {
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json({
-      success: true,
-      data: { events },
-    });
+    res.json({ success: true, data: { events } });
   }),
 
   completeEvent: asyncHandler(async (req, res) => {
@@ -233,9 +218,7 @@ export const eventController = {
 
     if (!event) throw new ApiError(404, 'Event not found');
     if (event.status !== 'ACCEPTED') throw new ApiError(400, 'Event must be accepted');
-    if (new Date() < new Date(event.endDate)) {
-      throw new ApiError(400, 'Event has not ended yet');
-    }
+    if (new Date() < new Date(event.endDate)) throw new ApiError(400, 'Event has not ended yet');
 
     const txHash = await blockchainService.completeEvent(id);
 

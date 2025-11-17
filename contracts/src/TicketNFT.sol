@@ -22,23 +22,23 @@ contract TicketNFT is ERC721, Ownable {
         uint256 tokenId = _tokenIdCounter++;
         _mint(vaultAddress, tokenId);
         _tokenURIs[tokenId] = metadataURI;
-        
+
         emit NFTMinted(tokenId, vaultAddress, metadataURI);
         return tokenId;
     }
 
     function claimNFT(uint256 tokenId, address claimer) external onlyOwner {
         require(ownerOf(tokenId) == vaultAddress, "NFT not in vault");
-        require(!claimed[tokenId], "NFT already claimed");
-        
+        require(!claimed[tokenId], "NFT claimed");
+
         claimed[tokenId] = true;
         _transfer(vaultAddress, claimer, tokenId);
-        
+
         emit NFTClaimed(tokenId, claimer);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(ownerOf(tokenId) != address(0), "Token does not exist");
+        require(ownerOf(tokenId) != address(0), "Invalid token");
         return _tokenURIs[tokenId];
     }
 }

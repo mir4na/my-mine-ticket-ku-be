@@ -9,8 +9,6 @@ import "../src/EventEscrow.sol";
 contract DeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address taxRecipient = vm.envAddress("TAX_RECIPIENT_ADDRESS");
-        address platformRecipient = vm.envAddress("PLATFORM_RECIPIENT_ADDRESS");
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -22,9 +20,7 @@ contract DeployScript is Script {
 
         EventEscrow escrow = new EventEscrow(
             address(wIDR),
-            address(ticketNFT),
-            taxRecipient,
-            platformRecipient
+            address(ticketNFT)
         );
         console.log("EventEscrow deployed at:", address(escrow));
 
@@ -37,7 +33,5 @@ contract DeployScript is Script {
         console.log("WIDR:", address(wIDR));
         console.log("TicketNFT:", address(ticketNFT));
         console.log("EventEscrow:", address(escrow));
-        console.log("Tax Recipient:", taxRecipient);
-        console.log("Platform Recipient:", platformRecipient);
     }
 }
