@@ -100,6 +100,7 @@ model TicketType {
   updatedAt       DateTime @updatedAt
 
   tickets         Ticket[]
+  transactions    Transaction[]
 }
 
 model Ticket {
@@ -119,15 +120,15 @@ model Ticket {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  transactions    Transaction[]
   scanLogs        ScanLog[]
   resaleListings  ResaleListing[]
 }
 
 model Transaction {
   id              String   @id @default(uuid())
-  ticketId        String
-  ticket          Ticket   @relation(fields: [ticketId], references: [id])
+  ticketTypeId    String
+  ticketType      TicketType @relation(fields: [ticketTypeId], references: [id])
+  ticketId        String?
   buyerId         String
   buyer           User     @relation(fields: [buyerId], references: [id])
   eventId         String

@@ -1,4 +1,3 @@
-// controllers/ticket.controller.js
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../utils/apiError.js';
 import { asyncHandler, generateQRSignature } from '../utils/helpers.js';
@@ -37,7 +36,7 @@ export const ticketController = {
 
     const transaction = await prisma.transaction.create({
       data: {
-        ticketId: ticketTypeId,
+        ticketTypeId: ticketTypeId,
         buyerId: req.user.id,
         eventId: ticketType.eventId,
         amount: ticketType.price,
@@ -74,22 +73,18 @@ export const ticketController = {
 
     const transaction = await prisma.transaction.findUnique({
       where: { id: orderId },
-      include: { buyer: true, event: true },
+      include: { buyer: true, event: true, ticketType: true },
     });
 
     if (!transaction) throw new ApiError(404, 'Transaction not found');
 
     if (paymentStatus === 'PAID' && transaction.paymentStatus !== 'PAID') {
       await prisma.$transaction(async (tx) => {
-        const ticketType = await tx.ticketType.findUnique({
-          where: { id: transaction.ticketId },
-        });
-
         const qrSignature = generateQRSignature(transaction.id, transaction.eventId);
 
         const ticket = await tx.ticket.create({
           data: {
-            ticketTypeId: transaction.ticketId,
+            ticketTypeId: transaction.ticketTypeId,
             ownerId: transaction.buyerId,
             purchasePrice: transaction.amount,
             qrSignature,
@@ -98,7 +93,7 @@ export const ticketController = {
         });
 
         await tx.ticketType.update({
-          where: { id: transaction.ticketId },
+          where: { id: transaction.ticketTypeId },
           data: { sold: { increment: 1 } },
         });
 
@@ -111,7 +106,7 @@ export const ticketController = {
           ticketId: ticket.id,
           eventName: transaction.event.name,
           eventBanner: transaction.event.bannerUrl,
-          ticketType: ticketType.name,
+          ticketType: transaction.ticketType.name,
           price: transaction.amount,
           purchaseDate: new Date().toISOString(),
         });
@@ -142,7 +137,7 @@ export const ticketController = {
           eventName: transaction.event.name,
           eventDate: transaction.event.startDate.toISOString(),
           eventLocation: transaction.event.location,
-          ticketType: ticketType.name,
+          ticketType: transaction.ticketType.name,
           price: transaction.amount,
           buyerName: transaction.buyer.displayName || transaction.buyer.username,
           pdfVersion: 1,
@@ -152,7 +147,7 @@ export const ticketController = {
           transaction.buyer.email,
           {
             eventName: transaction.event.name,
-            ticketType: ticketType.name,
+            ticketType: transaction.ticketType.name,
             eventDate: transaction.event.startDate.toLocaleDateString(),
             eventLocation: transaction.event.location,
             ticketId: ticket.id,
