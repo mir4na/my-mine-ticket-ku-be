@@ -37,13 +37,20 @@ export const eventController = {
         })),
       });
 
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
       for (const r of receivers) {
-        const approvalLink = `${process.env.FRONTEND_URL}/approve-revenue/${event.id}/${r.email}`;
-        await emailService.sendRevenueApprovalEmail(
-          r.email,
-          { eventName: name, percentage: r.percentage },
-          approvalLink
-        );
+        try {
+          const approvalLink = `${frontendUrl}/approve-revenue/${event.id}/${encodeURIComponent(r.email)}`;
+          await emailService.sendRevenueApprovalEmail(
+            r.email,
+            { eventName: name, percentage: r.percentage },
+            approvalLink
+          );
+          console.log(`Approval email sent to ${r.email}`);
+        } catch (emailError) {
+          console.error(`Failed to send email to ${r.email}:`, emailError.message);
+        }
       }
 
       await prisma.event.update({
